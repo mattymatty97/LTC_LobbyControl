@@ -12,6 +12,18 @@
         <ThunderStoreItems Include="..\README.md" />
         <ThunderStoreItems Include="..\CHANGELOG.md" />
     </ItemGroup>
+    <!-- Defining the reference files that have to be publicized. -->
+    <ItemGroup>
+        <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all" />
+
+        <!-- Publicize directly when referencing -->
+        <Reference Include="..\Dependencies\Assembly-CSharp.dll" Publicize="true" />
+        <Reference Include="..\Dependencies\Assembly-CSharp-firstpass.dll" Publicize="true" />
+        <Reference Include="..\Dependencies\Facepunch.Steamworks.Win64.dll" Publicize="true" />
+
+        <!-- clean referencing -->
+        <Reference Include="..\Dependencies\Unity.TextMeshPro.dll" Publicize="false" />
+    </ItemGroup>
 
     <!-- Ensure the user (you!) has actually set everything up properly. -->
     <Target Name="EnsureGameDirectoryDefined" BeforeTargets="PrepareForBuild">
