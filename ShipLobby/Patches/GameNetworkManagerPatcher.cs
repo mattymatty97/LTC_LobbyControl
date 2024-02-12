@@ -78,8 +78,25 @@ namespace ShipLobby.Patches
             if (__instance.IsServer && __instance.inShipPhase)
             {
                 ShipLobby.Log.LogDebug("Setting lobby to not joinable.");
+                ShipLobby.CanModifyLobby = false;
                 GameNetworkManager.Instance.SetLobbyJoinable(false);
+                
+                // Remove the friend invite button in the ESC menu.
+                if (_quickMenuManager == null)
+                    _quickMenuManager = Object.FindObjectOfType<QuickMenuManager>();
+                _quickMenuManager.inviteFriendsTextAlpha.alpha = 0f;
             }
+        }
+        
+        /// <summary>
+        /// reset the status if we disconnect
+        /// </summary>
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.StartDisconnect))]
+        private static void ResetStatus(GameNetworkManager __instance)
+        {
+            ShipLobby.CanModifyLobby = true;
+            ShipLobby.CanAutoSave = true;
         }
 
         /// <summary>
@@ -103,16 +120,19 @@ namespace ShipLobby.Patches
             yield return new WaitForSeconds(0.5f);
             yield return new WaitUntil(() => !__instance.firingPlayersCutsceneRunning);
             
-            ShipLobby.Log.LogDebug("Reopening lobby, setting to joinable.");
-            GameNetworkManager manager = GameNetworkManager.Instance;
-            if (manager.currentLobby == null)
-                yield break;
-            manager.SetLobbyJoinable(true);
             
-            // Restore the friend invite button in the ESC menu.
-            if (_quickMenuManager == null)
-                _quickMenuManager = Object.FindObjectOfType<QuickMenuManager>();
-            _quickMenuManager.inviteFriendsTextAlpha.alpha = 1f;
+            ShipLobby.Log.LogDebug("Lobby can be re-openned");
+
+            ShipLobby.CanModifyLobby = true;
+            
+            
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.AutoSaveShipData))]
+        private static bool PreventAutoSave()
+        {
+            return ShipLobby.CanAutoSave;
         }
     }
 }
