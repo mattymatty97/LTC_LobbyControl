@@ -4,10 +4,10 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle(ShipLobby.ShipLobby.NAME)]
+[assembly: AssemblyTitle(LobbyControl.LobbyControl.NAME)]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyProduct(ShipLobby.ShipLobby.NAME)]
+[assembly: AssemblyProduct(LobbyControl.LobbyControl.NAME)]
 [assembly: AssemblyCopyright("Copyright © tinyhoot 2023")]
 [assembly: AssemblyCulture("")]
 
@@ -26,5 +26,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion(ShipLobby.ShipLobby.VERSION)]
-[assembly: AssemblyFileVersion(ShipLobby.ShipLobby.VERSION)]
+[assembly: AssemblyVersion(LobbyControl.LobbyControl.VERSION)]
+[assembly: AssemblyFileVersion(LobbyControl.LobbyControl.VERSION)]

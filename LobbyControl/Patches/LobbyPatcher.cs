@@ -3,7 +3,7 @@ using HarmonyLib;
 using Steamworks;
 using Steamworks.Data;
 
-namespace ShipLobby.Patches
+namespace LobbyControl.Patches
 {    
     [HarmonyPatch]
     internal class LobbyPatcher

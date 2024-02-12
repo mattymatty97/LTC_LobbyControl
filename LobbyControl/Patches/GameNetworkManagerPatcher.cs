@@ -4,7 +4,7 @@ using Steamworks;
 using Unity.Netcode;
 using UnityEngine;
 
-namespace ShipLobby.Patches
+namespace LobbyControl.Patches
 {
     [HarmonyPatch]
     internal class GameNetworkManagerPatcher
@@ -15,14 +15,14 @@ namespace ShipLobby.Patches
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.Singleton_OnClientConnectedCallback))]
         private static void LogConnect()
         {
-            ShipLobby.Log.LogDebug("Player connected.");
+            LobbyControl.Log.LogDebug("Player connected.");
         }
         
         [HarmonyPostfix]
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.Singleton_OnClientDisconnectCallback))]
         private static void LogDisconnect()
         {
-            ShipLobby.Log.LogDebug("Player disconnected.");
+            LobbyControl.Log.LogDebug("Player disconnected.");
         }
 
         /// <summary>
@@ -38,7 +38,7 @@ namespace ShipLobby.Patches
             
             if (__instance.gameHasStarted && StartOfRound.Instance.inShipPhase)
             {
-                ShipLobby.Log.LogDebug("Approving incoming late connection.");
+                LobbyControl.Log.LogDebug("Approving incoming late connection.");
                 response.Reason = "";
                 response.Approved = true;
             }
@@ -63,7 +63,7 @@ namespace ShipLobby.Patches
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.LeaveLobbyAtGameStart))]
         private static bool PreventSteamLobbyLeaving(GameNetworkManager __instance)
         {
-            ShipLobby.Log.LogDebug("Preventing the closing of Steam lobby.");
+            LobbyControl.Log.LogDebug("Preventing the closing of Steam lobby.");
             // Do not run the method that would usually close down the lobby.
             return false;
         }
@@ -77,8 +77,8 @@ namespace ShipLobby.Patches
         {
             if (__instance.IsServer && __instance.inShipPhase)
             {
-                ShipLobby.Log.LogDebug("Setting lobby to not joinable.");
-                ShipLobby.CanModifyLobby = false;
+                LobbyControl.Log.LogDebug("Setting lobby to not joinable.");
+                LobbyControl.CanModifyLobby = false;
                 GameNetworkManager.Instance.SetLobbyJoinable(false);
                 
                 // Remove the friend invite button in the ESC menu.
@@ -95,8 +95,8 @@ namespace ShipLobby.Patches
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.StartDisconnect))]
         private static void ResetStatus(GameNetworkManager __instance)
         {
-            ShipLobby.CanModifyLobby = true;
-            ShipLobby.CanAutoSave = true;
+            LobbyControl.CanModifyLobby = true;
+            LobbyControl.CanAutoSave = true;
         }
 
         /// <summary>
@@ -121,9 +121,9 @@ namespace ShipLobby.Patches
             yield return new WaitUntil(() => !__instance.firingPlayersCutsceneRunning);
             
             
-            ShipLobby.Log.LogDebug("Lobby can be re-openned");
+            LobbyControl.Log.LogDebug("Lobby can be re-openned");
 
-            ShipLobby.CanModifyLobby = true;
+            LobbyControl.CanModifyLobby = true;
             
             
         }
@@ -132,7 +132,7 @@ namespace ShipLobby.Patches
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.AutoSaveShipData))]
         private static bool PreventAutoSave()
         {
-            return ShipLobby.CanAutoSave;
+            return LobbyControl.CanAutoSave;
         }
     }
 }

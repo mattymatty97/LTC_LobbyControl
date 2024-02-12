@@ -3,12 +3,11 @@ using System.Text;
 using BepInEx;
 using LethalAPI.TerminalCommands.Attributes;
 using LethalAPI.TerminalCommands.Models;
-using ShipLobby.Patches;
-using Steamworks;
+using LobbyControl.Patches;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace ShipLobby
+namespace LobbyControl
 {
     public class LobbyCommands
     {
@@ -60,7 +59,7 @@ namespace ShipLobby
                 var sub = text.Trim().Split()[0].Trim().ToLower();
                 var remaining = text.Substring(sub.Length).Trim();
 
-                ShipLobby.Log.LogInfo("Command is " + text + "|" + sub + "|" + remaining);
+                LobbyControl.Log.LogInfo("Command is " + text + "|" + sub + "|" + remaining);
 
                 switch (sub)
                 {
@@ -77,7 +76,7 @@ namespace ShipLobby
                         var status = LobbyPatcher.IsOpen(lobby);
                         var visibility = LobbyPatcher.GetVisibility(lobby);
                         var name = lobby.GetData("name");
-                        var autoSave = ShipLobby.CanAutoSave;
+                        var autoSave = LobbyControl.CanAutoSave;
 
                         StringBuilder builder = new StringBuilder("Lobby Status:");
                         builder.Append("\n- Name is '").Append(name).Append("'");
@@ -90,13 +89,13 @@ namespace ShipLobby
                     }
                     case "open":
                     {
-                        if (!ShipLobby.CanModifyLobby)
+                        if (!LobbyControl.CanModifyLobby)
                         {
                             node.displayText = "Lobby cannot be changed at the moment";
                             break;
                         }
 
-                        ShipLobby.Log.LogDebug("Reopening lobby, setting to joinable.");
+                        LobbyControl.Log.LogDebug("Reopening lobby, setting to joinable.");
                         var manager = GameNetworkManager.Instance;
                         if (!manager.currentLobby.HasValue)
                         {
@@ -108,7 +107,7 @@ namespace ShipLobby
 
                         var outText = "Lobby is now Open";
 
-                        ShipLobby.Log.LogInfo(outText);
+                        LobbyControl.Log.LogInfo(outText);
 
                         // Restore the friend invite button in the ESC menu.
                         if (_quickMenuManager == null)
@@ -121,13 +120,13 @@ namespace ShipLobby
                     }
                     case "close":
                     {
-                        if (!ShipLobby.CanModifyLobby)
+                        if (!LobbyControl.CanModifyLobby)
                         {
                             node.displayText = "Lobby cannot be changed at the moment";
                             break;
                         }
 
-                        ShipLobby.Log.LogDebug("Closing lobby, setting to not joinable.");
+                        LobbyControl.Log.LogDebug("Closing lobby, setting to not joinable.");
                         var manager = GameNetworkManager.Instance;
                         if (!manager.currentLobby.HasValue)
                         {
@@ -139,7 +138,7 @@ namespace ShipLobby
 
                         var outText = "Lobby is now Closed";
 
-                        ShipLobby.Log.LogInfo(outText);
+                        LobbyControl.Log.LogInfo(outText);
 
                         // Remove the friend invite button in the ESC menu.
                         if (_quickMenuManager == null)
@@ -151,13 +150,13 @@ namespace ShipLobby
                     }
                     case "private":
                     {
-                        if (!ShipLobby.CanModifyLobby)
+                        if (!LobbyControl.CanModifyLobby)
                         {
                             node.displayText = "Lobby cannot be changed at the moment";
                             break;
                         }
 
-                        ShipLobby.Log.LogDebug("Locking lobby, setting to Private.");
+                        LobbyControl.Log.LogDebug("Locking lobby, setting to Private.");
                         var manager = GameNetworkManager.Instance;
                         if (!manager.currentLobby.HasValue)
                         {
@@ -168,20 +167,20 @@ namespace ShipLobby
                         manager.currentLobby.Value.SetPrivate();
 
                         var outText = "Lobby is now Private";
-                        ShipLobby.Log.LogInfo(outText);
+                        LobbyControl.Log.LogInfo(outText);
                         node.displayText = outText;
                         node.maxCharactersToType = node.displayText.Length + 2;
                         break;
                     }
                     case "friend":
                     {
-                        if (!ShipLobby.CanModifyLobby)
+                        if (!LobbyControl.CanModifyLobby)
                         {
                             node.displayText = "Lobby cannot be changed at the moment";
                             break;
                         }
 
-                        ShipLobby.Log.LogDebug("Locking lobby, setting to Friends Only.");
+                        LobbyControl.Log.LogDebug("Locking lobby, setting to Friends Only.");
                         var manager = GameNetworkManager.Instance;
                         if (!manager.currentLobby.HasValue)
                         {
@@ -193,20 +192,20 @@ namespace ShipLobby
                         manager.currentLobby.Value.SetFriendsOnly();
 
                         var outText = "Lobby is now Friends Only";
-                        ShipLobby.Log.LogInfo(outText);
+                        LobbyControl.Log.LogInfo(outText);
                         node.displayText = outText;
                         node.maxCharactersToType = node.displayText.Length + 2;
                         break;
                     }
                     case "public":
                     {
-                        if (!ShipLobby.CanModifyLobby)
+                        if (!LobbyControl.CanModifyLobby)
                         {
                             node.displayText = "Lobby cannot be changed at the moment";
                             break;
                         }
 
-                        ShipLobby.Log.LogDebug("Unlocking lobby, setting to Public.");
+                        LobbyControl.Log.LogDebug("Unlocking lobby, setting to Public.");
                         var manager = GameNetworkManager.Instance;
                         if (!manager.currentLobby.HasValue)
                         {
@@ -216,7 +215,7 @@ namespace ShipLobby
 
                         manager.currentLobby.Value.SetPublic();
                         var outText = "Lobby is now Public";
-                        ShipLobby.Log.LogInfo(outText);
+                        LobbyControl.Log.LogInfo(outText);
 
                         node.displayText = outText;
                         node.maxCharactersToType = node.displayText.Length + 2;
@@ -225,13 +224,13 @@ namespace ShipLobby
                     case "autosave":
                     {
 
-                        ShipLobby.Log.LogDebug("Toggling AutoSave");
+                        LobbyControl.Log.LogDebug("Toggling AutoSave");
 
-                        ShipLobby.CanAutoSave = !ShipLobby.CanAutoSave;
+                        LobbyControl.CanAutoSave = !LobbyControl.CanAutoSave;
 
-                        var outText = "AutoSaving is now " + (ShipLobby.CanAutoSave ? "On" : "Off");
+                        var outText = "AutoSaving is now " + (LobbyControl.CanAutoSave ? "On" : "Off");
 
-                        ShipLobby.Log.LogInfo(outText);
+                        LobbyControl.Log.LogInfo(outText);
 
                         node.displayText = outText;
                         node.maxCharactersToType = node.displayText.Length + 2;
@@ -239,13 +238,13 @@ namespace ShipLobby
                     }
                     case "save":
                     {
-                        if (!ShipLobby.CanModifyLobby)
+                        if (!LobbyControl.CanModifyLobby)
                         {
                             node.displayText = "Lobby cannot be saved at the moment";
                             break;
                         }
 
-                        ShipLobby.Log.LogDebug("Saving Lobby");
+                        LobbyControl.Log.LogDebug("Saving Lobby");
                         var manager = GameNetworkManager.Instance;
                         if (!manager.currentLobby.HasValue)
                         {
@@ -267,7 +266,7 @@ namespace ShipLobby
 
                         manager.currentSaveFileName = oldSaveFileName;
 
-                        ShipLobby.Log.LogInfo(outText);
+                        LobbyControl.Log.LogInfo(outText);
 
                         node.displayText = outText;
                         node.maxCharactersToType = node.displayText.Length + 2;
@@ -281,7 +280,7 @@ namespace ShipLobby
                             break;
                         }
 
-                        if (!ShipLobby.CanModifyLobby)
+                        if (!LobbyControl.CanModifyLobby)
                         {
                             node.displayText = "Lobby cannot be changed at the moment";
                             break;
@@ -290,7 +289,7 @@ namespace ShipLobby
                         if (remaining.Length > 40)
                             remaining = remaining.Substring(0, 40);
 
-                        ShipLobby.Log.LogDebug("Renaming lobby: \"" + remaining + "\"");
+                        LobbyControl.Log.LogDebug("Renaming lobby: \"" + remaining + "\"");
                         var manager = GameNetworkManager.Instance;
                         if (!manager.currentLobby.HasValue)
                         {
@@ -305,7 +304,7 @@ namespace ShipLobby
                         ES3.Save<string>("HostSettings_Name", manager.steamLobbyName,"LCGeneralSaveData");
 
                         var outText = "Lobby renamed to \"" + remaining + "\"";
-                        ShipLobby.Log.LogInfo(outText);
+                        LobbyControl.Log.LogInfo(outText);
 
                         // Remove the friend invite button in the ESC menu.
                         if (_quickMenuManager == null)
@@ -329,7 +328,7 @@ namespace ShipLobby
             }
             catch (Exception ex)
             {
-                ShipLobby.Log.LogError("Exception:\n" + ex.ToString());
+                LobbyControl.Log.LogError("Exception:\n" + ex.ToString());
                 node.displayText = "Exception!";
             }
             return node;
