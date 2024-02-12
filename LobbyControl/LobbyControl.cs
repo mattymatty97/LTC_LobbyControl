@@ -4,10 +4,10 @@ using BepInEx.Logging;
 using HarmonyLib;
 using LethalAPI.TerminalCommands.Models;
 
-namespace ShipLobby
+namespace LobbyControl
 {
     [BepInPlugin(GUID, NAME, VERSION)]
-    internal class ShipLobby : BaseUnityPlugin
+    internal class LobbyControl : BaseUnityPlugin
     {
         public const string GUID = "com.github.mattymatty.LobbyControl";
         public const string NAME = "LobbyControl";
