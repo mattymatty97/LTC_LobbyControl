@@ -76,7 +76,7 @@ namespace LobbyControl
                         var status = LobbyPatcher.IsOpen(lobby);
                         var visibility = LobbyPatcher.GetVisibility(lobby);
                         var name = lobby.GetData("name");
-                        var autoSave = LobbyControl.CanAutoSave;
+                        var autoSave = LobbyControl.CanSave;
 
                         StringBuilder builder = new StringBuilder("Lobby Status:");
                         builder.Append("\n- Name is '").Append(name).Append("'");
@@ -226,9 +226,9 @@ namespace LobbyControl
 
                         LobbyControl.Log.LogDebug("Toggling AutoSave");
 
-                        LobbyControl.CanAutoSave = !LobbyControl.CanAutoSave;
+                        LobbyControl.CanSave = !LobbyControl.CanSave;
 
-                        var outText = "AutoSaving is now " + (LobbyControl.CanAutoSave ? "On" : "Off");
+                        var outText = "AutoSaving is now " + (LobbyControl.CanSave ? "On" : "Off");
 
                         LobbyControl.Log.LogInfo(outText);
 
@@ -252,6 +252,7 @@ namespace LobbyControl
                             break;
                         }
 
+                        var oldAutosaveState = LobbyControl.CanSave;
                         var oldSaveFileName = manager.currentSaveFileName;
                         if (!remaining.IsNullOrWhiteSpace())
                         {
@@ -260,10 +261,11 @@ namespace LobbyControl
                             manager.currentSaveFileName = remaining;
                         }
 
+                        LobbyControl.CanSave = true;
                         HUDManager.Instance.saveDataIconAnimatorB.SetTrigger("save");
                         manager.SaveGame();
                         var outText = "Lobby Saved to " + manager.currentSaveFileName;
-
+                        LobbyControl.CanSave = oldAutosaveState;
                         manager.currentSaveFileName = oldSaveFileName;
 
                         LobbyControl.Log.LogInfo(outText);

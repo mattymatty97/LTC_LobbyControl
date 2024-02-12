@@ -17,7 +17,7 @@ namespace LobbyControl
 
         public static bool CanModifyLobby = true;
 
-        public static bool CanAutoSave = true;
+        public static bool CanSave = true;
         
         private TerminalModRegistry _commands;
 
