@@ -1,13 +1,19 @@
+using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Reflection.Emit;
+using System.Runtime.InteropServices;
 using HarmonyLib;
-using Steamworks;
+using Steamworks.Data;
 using Unity.Netcode;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace LobbyControl.Patches
 {
     [HarmonyPatch]
-    internal class GameNetworkManagerPatcher
+    internal class NetworkPatcher
     {
         private static QuickMenuManager _quickMenuManager;
         
@@ -91,12 +97,12 @@ namespace LobbyControl.Patches
         /// <summary>
         /// reset the status if we disconnect
         /// </summary>
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.StartDisconnect))]
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.Disconnect))]
         private static void ResetStatus(GameNetworkManager __instance)
         {
             LobbyControl.CanModifyLobby = true;
-            LobbyControl.CanAutoSave = true;
+            LobbyControl.CanSave = true;
         }
 
         /// <summary>
@@ -129,10 +135,11 @@ namespace LobbyControl.Patches
         }
 
         [HarmonyPrefix]
-        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.AutoSaveShipData))]
-        private static bool PreventAutoSave()
+        [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.SaveGame))]
+        private static bool PreventSave()
         {
-            return LobbyControl.CanAutoSave;
+            return LobbyControl.CanSave;
         }
+        
     }
 }
