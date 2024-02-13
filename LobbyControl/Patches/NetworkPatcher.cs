@@ -103,6 +103,7 @@ namespace LobbyControl.Patches
         {
             LobbyControl.CanModifyLobby = true;
             LobbyControl.CanSave = true;
+            LobbyControl.AutoSaveEnabled = true;
         }
 
         /// <summary>
@@ -131,7 +132,6 @@ namespace LobbyControl.Patches
 
             LobbyControl.CanModifyLobby = true;
             
-            
         }
 
         [HarmonyPrefix]
@@ -141,5 +141,19 @@ namespace LobbyControl.Patches
             return LobbyControl.CanSave;
         }
         
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.SaveGame))]
+        private static void SaveCustomLobbyStatus(GameNetworkManager __instance)
+        {
+            ES3.Save<bool>("LC_SavingMethod", LobbyControl.AutoSaveEnabled, __instance.currentSaveFileName);
+        }
+        
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.Start))]
+        private static void ReadCustomLobbyStatus(StartOfRound __instance)
+        {
+            if (__instance.IsServer)
+                LobbyControl.AutoSaveEnabled = LobbyControl.CanSave = ES3.Load<bool>("LC_SavingMethod", GameNetworkManager.Instance.currentSaveFileName, true);
+        }
     }
 }

@@ -18,9 +18,9 @@ namespace LobbyControl
 - private       : set lobby to Invite Only
 - friend        : set lobby to Friends Only
 - public        : set lobby to Public
+- rename [name] : change the name of the lobby
 - autosave      : toggle the autosave state
 - save (name)   : forcefully save the lobby
-- rename [name] : change the name of the lobby
 ";
 
         private static QuickMenuManager _quickMenuManager;
@@ -82,7 +82,7 @@ namespace LobbyControl
                         builder.Append("\n- Name is '").Append(name).Append("'");
                         builder.Append("\n- Status is ").Append(status ? "Open" : "Closed");
                         builder.Append("\n- Visibility is ").Append(visibility.ToString());
-                        builder.Append("\n- AutoSaving is ").Append(autoSave ? "On" : "Off");
+                        builder.Append("\n- Saving is ").Append(autoSave ? "Automatic" : "Manual");
                         node.displayText = builder.ToString();
                         node.maxCharactersToType = node.displayText.Length + 2;
                         break;
@@ -225,8 +225,8 @@ namespace LobbyControl
                     {
 
                         LobbyControl.Log.LogDebug("Toggling AutoSave");
-
-                        LobbyControl.CanSave = !LobbyControl.CanSave;
+                        
+                        LobbyControl.CanSave = LobbyControl.AutoSaveEnabled = !LobbyControl.AutoSaveEnabled;
 
                         var outText = "AutoSaving is now " + (LobbyControl.CanSave ? "On" : "Off");
 
@@ -252,7 +252,6 @@ namespace LobbyControl
                             break;
                         }
 
-                        var oldAutosaveState = LobbyControl.CanSave;
                         var oldSaveFileName = manager.currentSaveFileName;
                         if (!remaining.IsNullOrWhiteSpace())
                         {
@@ -265,7 +264,7 @@ namespace LobbyControl
                         HUDManager.Instance.saveDataIconAnimatorB.SetTrigger("save");
                         manager.SaveGame();
                         var outText = "Lobby Saved to " + manager.currentSaveFileName;
-                        LobbyControl.CanSave = oldAutosaveState;
+                        LobbyControl.CanSave = LobbyControl.AutoSaveEnabled;
                         manager.currentSaveFileName = oldSaveFileName;
 
                         LobbyControl.Log.LogInfo(outText);

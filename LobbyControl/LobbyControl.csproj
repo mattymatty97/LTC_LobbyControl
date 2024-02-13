@@ -276,6 +276,7 @@
     </ItemGroup>
     <ItemGroup>
         <Compile Include="LobbyCommands.cs" />
+        <Compile Include="Patches\ItemClippingPatch.cs" />
         <Compile Include="Patches\NetworkPatcher.cs" />
         <Compile Include="Patches\LobbyPatcher.cs" />
         <Compile Include="LobbyControl.cs" />
