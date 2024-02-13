@@ -11,7 +11,7 @@ namespace LobbyControl
     {
         public const string GUID = "com.github.mattymatty.LobbyControl";
         public const string NAME = "LobbyControl";
-        public const string VERSION = "2.1.0";
+        public const string VERSION = "2.1.1";
         
         internal static ManualLogSource Log;
 
