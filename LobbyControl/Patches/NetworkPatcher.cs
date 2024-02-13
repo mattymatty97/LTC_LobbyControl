@@ -145,7 +145,8 @@ namespace LobbyControl.Patches
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.SaveGame))]
         private static void SaveCustomLobbyStatus(GameNetworkManager __instance)
         {
-            ES3.Save<bool>("LC_SavingMethod", LobbyControl.AutoSaveEnabled, __instance.currentSaveFileName);
+            if (LobbyControl.CanSave)
+                ES3.Save<bool>("LC_SavingMethod", LobbyControl.AutoSaveEnabled, __instance.currentSaveFileName);
         }
         
         [HarmonyPrefix]
