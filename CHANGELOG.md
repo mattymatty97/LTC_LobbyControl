@@ -1,3 +1,11 @@
+## v2.1.1
+- Full support of lobby status
+- Addition to ste AutoSaving status and manual save command
+- Integration of ItemClippingFix and expansion for host item rotation
+
+## v2.0.0
+- Fork Point and first rewrite with terminal commands
+
 ## v1.0.2
 
 - Fixes the ship lever getting stuck if someone joins before the post-mission

@@ -267,7 +267,7 @@ namespace LobbyControl.Patches
 				if (!__instance.IsServer) 
 					return;
 				
-				GrabbableObject[] objects = UnityEngine.Object.FindObjectsOfType<GrabbableObject>();
+				GrabbableObject[] objects = UnityEngine.Object.FindObjectsByType<GrabbableObject>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
 					
 				foreach (GrabbableObject itemObject in objects)
 				{
