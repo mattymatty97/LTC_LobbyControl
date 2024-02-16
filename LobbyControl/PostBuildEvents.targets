@@ -43,11 +43,11 @@
     </Target>
     <PropertyGroup>
         <!-- The mod directory to install our mod to. -->
-        <ModDirectory>$(GameDirectory)\BepInEx\plugins\$(AssemblyName)</ModDirectory>
+        <ModDirectory>$(GameDirectory)\BepInEx\plugins\mattymatty-$(AssemblyName)</ModDirectory>
         <!-- Where to create the temporary directory for creating the release zip files. -->
         <TempZipDir>$(OutputPath)ZipMeUp</TempZipDir>
         <!-- The internal structure of the zip file. -->
-        <ZipStructure>plugins\$(AssemblyName)</ZipStructure>
+        <ZipStructure>$(AssemblyName)</ZipStructure>
     </PropertyGroup>
 
     <!-- Copy newly built files to the game directory. -->

@@ -102,8 +102,6 @@ namespace LobbyControl.Patches
         private static void ResetStatus(GameNetworkManager __instance)
         {
             LobbyControl.CanModifyLobby = true;
-            LobbyControl.CanSave = true;
-            LobbyControl.AutoSaveEnabled = true;
         }
 
         /// <summary>
@@ -136,20 +134,14 @@ namespace LobbyControl.Patches
 
         [HarmonyPrefix]
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.SaveGame))]
-        private static bool PreventSave()
+        private static bool PreventSave(GameNetworkManager __instance)
         {
+            if (LobbyControl.CanSave)
+                ES3.Save<bool>("LC_SavingMethod", LobbyControl.AutoSaveEnabled, __instance.currentSaveFileName);
             return LobbyControl.CanSave;
         }
         
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.SaveGame))]
-        private static void SaveCustomLobbyStatus(GameNetworkManager __instance)
-        {
-            if (LobbyControl.CanSave)
-                ES3.Save<bool>("LC_SavingMethod", LobbyControl.AutoSaveEnabled, __instance.currentSaveFileName);
-        }
-        
-        [HarmonyPrefix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.Start))]
         private static void ReadCustomLobbyStatus(StartOfRound __instance)
         {

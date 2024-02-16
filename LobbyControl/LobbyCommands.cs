@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using System.Threading;
 using BepInEx;
 using LethalAPI.TerminalCommands.Attributes;
 using LethalAPI.TerminalCommands.Models;
@@ -21,6 +22,7 @@ namespace LobbyControl
 - rename [name] : change the name of the lobby
 - autosave      : toggle the autosave state
 - save (name)   : forcefully save the lobby
+- load (name)   : reload the lobby
 ";
 
         private static QuickMenuManager _quickMenuManager;
@@ -79,6 +81,7 @@ namespace LobbyControl
                         var autoSave = LobbyControl.CanSave;
 
                         StringBuilder builder = new StringBuilder("Lobby Status:");
+                        builder.Append("\n- File is '").Append(manager.currentSaveFileName).Append("'");
                         builder.Append("\n- Name is '").Append(name).Append("'");
                         builder.Append("\n- Status is ").Append(status ? "Open" : "Closed");
                         builder.Append("\n- Visibility is ").Append(visibility.ToString());
@@ -221,58 +224,6 @@ namespace LobbyControl
                         node.maxCharactersToType = node.displayText.Length + 2;
                         break;
                     }
-                    case "autosave":
-                    {
-
-                        LobbyControl.Log.LogDebug("Toggling AutoSave");
-                        
-                        LobbyControl.CanSave = LobbyControl.AutoSaveEnabled = !LobbyControl.AutoSaveEnabled;
-
-                        var outText = "AutoSaving is now " + (LobbyControl.CanSave ? "On" : "Off");
-
-                        LobbyControl.Log.LogInfo(outText);
-
-                        node.displayText = outText;
-                        node.maxCharactersToType = node.displayText.Length + 2;
-                        break;
-                    }
-                    case "save":
-                    {
-                        if (!LobbyControl.CanModifyLobby)
-                        {
-                            node.displayText = "Lobby cannot be saved at the moment";
-                            break;
-                        }
-
-                        LobbyControl.Log.LogDebug("Saving Lobby");
-                        var manager = GameNetworkManager.Instance;
-                        if (!manager.currentLobby.HasValue)
-                        {
-                            node.displayText = "Failed to fetch lobby ( was null )";
-                            break;
-                        }
-
-                        var oldSaveFileName = manager.currentSaveFileName;
-                        if (!remaining.IsNullOrWhiteSpace())
-                        {
-                            if (remaining.Length > 20)
-                                remaining = remaining.Substring(0, 20);
-                            manager.currentSaveFileName = remaining;
-                        }
-
-                        LobbyControl.CanSave = true;
-                        HUDManager.Instance.saveDataIconAnimatorB.SetTrigger("save");
-                        manager.SaveGame();
-                        var outText = "Lobby Saved to " + manager.currentSaveFileName;
-                        LobbyControl.CanSave = LobbyControl.AutoSaveEnabled;
-                        manager.currentSaveFileName = oldSaveFileName;
-
-                        LobbyControl.Log.LogInfo(outText);
-
-                        node.displayText = outText;
-                        node.maxCharactersToType = node.displayText.Length + 2;
-                        break;
-                    }
                     case "rename":
                     {
                         if (remaining.IsNullOrWhiteSpace())
@@ -315,6 +266,135 @@ namespace LobbyControl
                         node.maxCharactersToType = node.displayText.Length + 2;
                         break;
                     }
+                    case "autosave":
+                    {
+
+                        LobbyControl.Log.LogDebug("Toggling AutoSave");
+                        
+                        LobbyControl.CanSave = LobbyControl.AutoSaveEnabled = !LobbyControl.AutoSaveEnabled;
+
+                        var outText = "AutoSaving is now " + (LobbyControl.CanSave ? "On" : "Off");
+
+                        LobbyControl.Log.LogInfo(outText);
+
+                        node.displayText = outText;
+                        node.maxCharactersToType = node.displayText.Length + 2;
+                        break;
+                    }
+                    case "save":
+                    {
+                        if (!LobbyControl.CanModifyLobby)
+                        {
+                            node.displayText = "Lobby cannot be saved at the moment";
+                            break;
+                        }
+                        
+                        if (StartOfRound.Instance.isChallengeFile)
+                        {
+                            node.displayText = "Cannot Edit Challenge Save";
+                            return node;
+                        }
+
+                        LobbyControl.Log.LogDebug("Saving Lobby");
+                        var manager = GameNetworkManager.Instance;
+                        if (!manager.currentLobby.HasValue)
+                        {
+                            node.displayText = "Failed to fetch lobby ( was null )";
+                            break;
+                        }
+
+                        var oldSaveFileName = manager.currentSaveFileName;
+                        if (!remaining.IsNullOrWhiteSpace())
+                        {
+                            if (remaining.Length > 20)
+                                remaining = remaining.Substring(0, 20);
+                            manager.currentSaveFileName = remaining;
+                        }
+
+                        if (oldSaveFileName != manager.currentSaveFileName)
+                        {
+                            ES3.CopyFile(oldSaveFileName,manager.currentSaveFileName);
+                        }
+
+                        LobbyControl.CanSave = true;
+                        HUDManager.Instance.saveDataIconAnimatorB.SetTrigger("save");
+                        manager.SaveGame();
+                        var outText = "Lobby Saved to " + manager.currentSaveFileName;
+                        LobbyControl.CanSave = LobbyControl.AutoSaveEnabled;
+                        manager.currentSaveFileName = oldSaveFileName;
+
+                        LobbyControl.Log.LogInfo(outText);
+
+                        node.displayText = outText;
+                        node.maxCharactersToType = node.displayText.Length + 2;
+                        break;
+                    }
+                    case "load":
+                    {
+                        if (!LobbyControl.CanModifyLobby)
+                        {
+                            node.displayText = "Lobby cannot be modified at the moment";
+                            break;
+                        }
+                        
+                        if (StartOfRound.Instance.isChallengeFile)
+                        {
+                            node.displayText = "Cannot Edit Challenge Save";
+                            return node;
+                        }
+
+                        LobbyControl.Log.LogDebug("Reloading Lobby");
+                        var manager = GameNetworkManager.Instance;
+                        if (!manager.currentLobby.HasValue)
+                        {
+                            node.displayText = "Failed to fetch lobby ( was null )";
+                            break;
+                        }
+
+                        var oldSaveFileName = manager.currentSaveFileName;
+                        if (!remaining.IsNullOrWhiteSpace())
+                        {
+                            if (remaining.Length > 20)
+                                remaining = remaining.Substring(0, 20);
+                            manager.currentSaveFileName = remaining;
+                        }
+
+                        var outText = "Lobby \'" + manager.currentSaveFileName + "\' loaded";
+                        
+                        if (ES3.FileExists(manager.currentSaveFileName))
+                        {
+                            StartOfRound startOfRound = StartOfRound.Instance;
+                            Terminal terminal = Object.FindObjectOfType<Terminal>();
+                            //remove all items
+                            startOfRound.ResetShipFurniture();
+                            //try reload the save file
+                            startOfRound.SetTimeAndPlanetToSavedSettings();
+                            LobbyControl.ReloadShipUnlockables();
+                            startOfRound.LoadShipGrabbableItems();
+                            terminal.Start();
+                            //sync the new values
+                            TimeOfDay timeOfDay = TimeOfDay.Instance;
+                            timeOfDay.SyncNewProfitQuotaClientRpc(timeOfDay.profitQuota, 0, timeOfDay.timesFulfilledQuota);
+                            timeOfDay.SyncGlobalTimeOnNetwork();
+                            startOfRound.SyncShipUnlockablesServerRpc();
+                            terminal.SyncGroupCreditsServerRpc(-1, 0);
+                            startOfRound.SyncCompanyBuyingRateServerRpc();
+                            startOfRound.SyncSuitsServerRpc();
+                            LobbyControl.AutoSaveEnabled = LobbyControl.CanSave = ES3.Load<bool>("LC_SavingMethod", GameNetworkManager.Instance.currentSaveFileName, true);
+                            
+                            LobbyControl.Log.LogInfo(outText);
+                        }
+                        else
+                        {
+                            outText = "Lobby \'" + manager.currentSaveFileName + "\' does not Exist";
+                            LobbyControl.Log.LogError(outText);
+                            manager.currentSaveFileName = oldSaveFileName;
+                        }
+                        
+                        node.displayText = outText;
+                        node.maxCharactersToType = node.displayText.Length + 2;
+                        break;
+                }
                     case "help":
                     {
                         node.displayText = DefaultText;
