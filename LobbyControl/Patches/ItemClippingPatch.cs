@@ -259,20 +259,30 @@ namespace LobbyControl.Patches
 					}
 				}
 			}
+
+			private static bool UpdateNextTick = false;
 			
 			[HarmonyPostfix]
-			[HarmonyPatch(nameof(StartOfRound.Start))]
-			public static void StartPatch(StartOfRound __instance)
+			[HarmonyPatch(nameof(StartOfRound.LoadShipGrabbableItems))]
+			public static void GrabbablePatch(StartOfRound __instance)
 			{
-				if (!__instance.IsServer) 
-					return;
+				UpdateNextTick = true;
+			}
+			
+			[HarmonyPostfix]
+			[HarmonyPatch(nameof(StartOfRound.Update))]
+			public static void UpdatePatch(StartOfRound __instance)
+			{
 				
-				GrabbableObject[] objects = UnityEngine.Object.FindObjectsByType<GrabbableObject>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+				if (!__instance.IsServer || !UpdateNextTick) 
+					return;
+
+				UpdateNextTick = false;
+				
+				GrabbableObject[] objects = UnityEngine.Object.FindObjectsOfType<GrabbableObject>();
 					
 				foreach (GrabbableObject itemObject in objects)
 				{
-					if (!itemObject.enabled) 
-						continue;
 					itemObject.transform.rotation = Quaternion.Euler(
 						itemObject.itemProperties.restingRotation.x,
 						itemObject.floorYRot == -1 ? itemObject.transform.eulerAngles.y : (itemObject.floorYRot + itemObject.itemProperties.floorYOffset + 90f),
