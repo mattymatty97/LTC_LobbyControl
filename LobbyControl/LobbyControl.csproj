@@ -281,6 +281,7 @@
         <Compile Include="Patches\NetworkPatcher.cs" />
         <Compile Include="Patches\LobbyPatcher.cs" />
         <Compile Include="LobbyControl.cs" />
+        <Compile Include="Patches\RadarPatch.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
     </ItemGroup>
     <ItemGroup>

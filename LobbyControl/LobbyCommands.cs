@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using BepInEx;
+using GameNetcodeStuff;
 using LethalAPI.TerminalCommands.Attributes;
 using LethalAPI.TerminalCommands.Models;
 using LobbyControl.Patches;
+using Unity.Netcode;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -367,18 +370,15 @@ namespace LobbyControl
                             Terminal terminal = Object.FindObjectOfType<Terminal>();
                             //remove all items
                             startOfRound.ResetShipFurniture();
+                            startOfRound.ResetPooledObjects(true);
                             //try reload the save file
                             startOfRound.SetTimeAndPlanetToSavedSettings();
                             LobbyControl.ReloadShipUnlockables();
                             startOfRound.LoadShipGrabbableItems();
                             terminal.Start();
                             //sync the new values
-                            TimeOfDay timeOfDay = TimeOfDay.Instance;
-                            timeOfDay.SyncNewProfitQuotaClientRpc(timeOfDay.profitQuota, 0, timeOfDay.timesFulfilledQuota);
-                            timeOfDay.SyncGlobalTimeOnNetwork();
-                            startOfRound.SyncShipUnlockablesServerRpc();
-                            terminal.SyncGroupCreditsServerRpc(-1, 0);
-                            startOfRound.SyncCompanyBuyingRateServerRpc();
+                            startOfRound.SetMapScreenInfoToCurrentLevel();
+                            RefreshLobby();
                             startOfRound.SyncSuitsServerRpc();
                             LobbyControl.AutoSaveEnabled = LobbyControl.CanSave = ES3.Load<bool>("LC_SavingMethod", GameNetworkManager.Instance.currentSaveFileName, true);
                             
@@ -413,6 +413,38 @@ namespace LobbyControl
                 node.displayText = "Exception!";
             }
             return node;
+        }
+
+        private static void RefreshLobby()
+        {
+            StartOfRound startOfRound = StartOfRound.Instance;
+            List<ulong> ulongList = new List<ulong>();
+            for (int index = 0; index < startOfRound.allPlayerObjects.Length; ++index)
+            {
+                NetworkObject component = startOfRound.allPlayerObjects[index].GetComponent<NetworkObject>();
+                if (!component.IsOwnedByServer)
+                    ulongList.Add(component.OwnerClientId);
+                else if (index == 0)
+                    ulongList.Add(NetworkManager.Singleton.LocalClientId);
+                else
+                    ulongList.Add(999UL);
+            }     
+            int groupCredits = UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits;
+            int profitQuota = TimeOfDay.Instance.profitQuota;
+            int quotaFulfilled = TimeOfDay.Instance.quotaFulfilled;
+            int timeUntilDeadline = (int) TimeOfDay.Instance.timeUntilDeadline;
+            for (int index = 0; index < startOfRound.allPlayerObjects.Length; ++index)
+            {
+                PlayerControllerB controller = startOfRound.allPlayerScripts[index];
+                if (!controller.IsOwnedByServer)
+                {
+                    startOfRound.OnPlayerConnectedClientRpc(controller.playerClientId,
+                        startOfRound.connectedPlayersAmount - 1, ulongList.ToArray(), index, groupCredits,
+                        startOfRound.currentLevelID, profitQuota, timeUntilDeadline, quotaFulfilled,
+                        startOfRound.randomMapSeed, startOfRound.isChallengeFile);
+                    startOfRound.SyncAlreadyHeldObjectsServerRpc(index);
+                }
+            }
         }
     }
 }

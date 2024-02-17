@@ -147,6 +147,7 @@ namespace LobbyControl.Patches
         {
             if (__instance.IsServer)
                 LobbyControl.AutoSaveEnabled = LobbyControl.CanSave = ES3.Load<bool>("LC_SavingMethod", GameNetworkManager.Instance.currentSaveFileName, true);
-        }
+        }        
+        
     }
 }
