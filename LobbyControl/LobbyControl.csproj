@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-    <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+    <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')"/>
     <PropertyGroup>
         <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
         <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -42,7 +42,7 @@
             <HintPath>..\packages\BepInEx.BaseLib.5.4.21\lib\net35\BepInEx.dll</HintPath>
         </Reference>
         <Reference Include="LethalAPI.TerminalCommands">
-          <HintPath>..\Dependencies\LethalAPI.TerminalCommands.dll</HintPath>
+            <HintPath>..\Dependencies\LethalAPI.TerminalCommands.dll</HintPath>
         </Reference>
         <Reference Include="Mono.Cecil, Version=0.11.4.0, Culture=neutral, PublicKeyToken=50cebf1cceb9d05e, processorArchitecture=MSIL">
             <HintPath>..\packages\Mono.Cecil.0.11.4\lib\net40\Mono.Cecil.dll</HintPath>
@@ -62,18 +62,18 @@
         <Reference Include="MonoMod.Utils, Version=21.12.13.1, Culture=neutral, processorArchitecture=MSIL">
             <HintPath>..\packages\MonoMod.Utils.21.12.13.1\lib\net452\MonoMod.Utils.dll</HintPath>
         </Reference>
-        <Reference Include="System" />
-        <Reference Include="System.Core" />
-        <Reference Include="System.Data" />
-        <Reference Include="System.Xml" />
+        <Reference Include="System"/>
+        <Reference Include="System.Core"/>
+        <Reference Include="System.Data"/>
+        <Reference Include="System.Xml"/>
         <Reference Include="Unity.Netcode.Components">
-          <HintPath>..\Dependencies\Unity.Netcode.Components.dll</HintPath>
+            <HintPath>..\Dependencies\Unity.Netcode.Components.dll</HintPath>
         </Reference>
         <Reference Include="Unity.Netcode.Runtime">
-          <HintPath>..\Dependencies\Unity.Netcode.Runtime.dll</HintPath>
+            <HintPath>..\Dependencies\Unity.Netcode.Runtime.dll</HintPath>
         </Reference>
         <Reference Include="Unity.Networking.Transport">
-          <HintPath>..\Dependencies\Unity.Networking.Transport.dll</HintPath>
+            <HintPath>..\Dependencies\Unity.Networking.Transport.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
             <HintPath>..\packages\UnityEngine.Modules.2022.3.9\lib\net45\UnityEngine.dll</HintPath>
@@ -275,36 +275,36 @@
         </Reference>
     </ItemGroup>
     <ItemGroup>
-        <Compile Include="LobbyCommands.cs" />
-        <Compile Include="Patches\ItemClippingPatch.cs" />
-        <Compile Include="Patches\LimitPatcher.cs" />
-        <Compile Include="Patches\NetworkPatcher.cs" />
-        <Compile Include="Patches\LobbyPatcher.cs" />
-        <Compile Include="LobbyControl.cs" />
-        <Compile Include="Patches\RadarPatch.cs" />
-        <Compile Include="Patches\TransparentPlayerPatch.cs" />
-        <Compile Include="Properties\AssemblyInfo.cs" />
+        <Compile Include="LobbyCommands.cs"/>
+        <Compile Include="Patches\ItemClippingPatch.cs"/>
+        <Compile Include="Patches\LimitPatcher.cs"/>
+        <Compile Include="Patches\NetworkPatcher.cs"/>
+        <Compile Include="Patches\LobbyPatcher.cs"/>
+        <Compile Include="LobbyControl.cs"/>
+        <Compile Include="Patches\RadarPatch.cs"/>
+        <Compile Include="Patches\TransparentPlayerPatch.cs"/>
+        <Compile Include="Properties\AssemblyInfo.cs"/>
     </ItemGroup>
     <ItemGroup>
-        <None Include="packages.config" />
+        <None Include="packages.config"/>
     </ItemGroup>
     <ItemGroup>
-        <Content Include="GameDirectory.targets" />
-        <Content Include="PostBuildEvents.targets" />
+        <Content Include="GameDirectory.targets"/>
+        <Content Include="PostBuildEvents.targets"/>
     </ItemGroup>
     <ItemGroup>
-      <PackageReference Include="HarmonyX" Version="2.5.5" />
-      <PackageReference Include="Mono.Cecil" Version="0.11.4" />
-      <PackageReference Include="MonoMod.RuntimeDetour" Version="21.12.13.1" />
-      <PackageReference Include="MonoMod.Utils" Version="21.12.13.1" />
+        <PackageReference Include="HarmonyX" Version="2.5.5"/>
+        <PackageReference Include="Mono.Cecil" Version="0.11.4"/>
+        <PackageReference Include="MonoMod.RuntimeDetour" Version="21.12.13.1"/>
+        <PackageReference Include="MonoMod.Utils" Version="21.12.13.1"/>
     </ItemGroup>
-    <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-    <Import Project="..\packages\BepInEx.Core.5.4.21\build\BepInEx.Core.targets" Condition="Exists('..\packages\BepInEx.Core.5.4.21\build\BepInEx.Core.targets')" />
+    <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets"/>
+    <Import Project="..\packages\BepInEx.Core.5.4.21\build\BepInEx.Core.targets" Condition="Exists('..\packages\BepInEx.Core.5.4.21\build\BepInEx.Core.targets')"/>
     <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
         <PropertyGroup>
             <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them. For more information, see http://go.microsoft.com/fwlink/?LinkID=322105.The missing file is {0}.</ErrorText>
         </PropertyGroup>
-        <Error Condition="!Exists('..\packages\BepInEx.Core.5.4.21\build\BepInEx.Core.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\BepInEx.Core.5.4.21\build\BepInEx.Core.targets'))" />
+        <Error Condition="!Exists('..\packages\BepInEx.Core.5.4.21\build\BepInEx.Core.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\BepInEx.Core.5.4.21\build\BepInEx.Core.targets'))"/>
     </Target>
     <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
          Other similar extension points exist, see Microsoft.Common.targets.
@@ -313,6 +313,6 @@
     <Target Name="AfterBuild">
     </Target>
     -->
-    <Import Project="PostBuildEvents.targets" />
+    <Import Project="PostBuildEvents.targets"/>
 
 </Project>

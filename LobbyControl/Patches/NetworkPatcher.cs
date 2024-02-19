@@ -1,11 +1,5 @@
-using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Reflection.Emit;
-using System.Runtime.InteropServices;
 using HarmonyLib;
-using Steamworks.Data;
 using Unity.Netcode;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -16,14 +10,14 @@ namespace LobbyControl.Patches
     internal class NetworkPatcher
     {
         private static QuickMenuManager _quickMenuManager;
-        
+
         [HarmonyPostfix]
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.Singleton_OnClientConnectedCallback))]
         private static void LogConnect()
         {
             LobbyControl.Log.LogDebug("Player connected.");
         }
-        
+
         [HarmonyPostfix]
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.Singleton_OnClientDisconnectCallback))]
         private static void LogDisconnect()
@@ -32,16 +26,17 @@ namespace LobbyControl.Patches
         }
 
         /// <summary>
-        /// Ensure that any incoming connections are properly accepted.
+        ///     Ensure that any incoming connections are properly accepted.
         /// </summary>
         [HarmonyPostfix]
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.ConnectionApproval))]
-        private static void FixConnectionApproval(GameNetworkManager __instance, NetworkManager.ConnectionApprovalResponse response)
+        private static void FixConnectionApproval(GameNetworkManager __instance,
+            NetworkManager.ConnectionApprovalResponse response)
         {
             // Only override refusals that are due to the current game state being set to "has already started".
             if (response.Approved || response.Reason != "Game has already started!")
                 return;
-            
+
             if (__instance.gameHasStarted && StartOfRound.Instance.inShipPhase)
             {
                 LobbyControl.Log.LogDebug("Approving incoming late connection.");
@@ -51,7 +46,7 @@ namespace LobbyControl.Patches
         }
 
         /// <summary>
-        /// Make the friend invite button work again once we are back in orbit.
+        ///     Make the friend invite button work again once we are back in orbit.
         /// </summary>
         [HarmonyPostfix]
         [HarmonyPatch(typeof(QuickMenuManager), nameof(QuickMenuManager.InviteFriendsButton))]
@@ -63,7 +58,7 @@ namespace LobbyControl.Patches
         }
 
         /// <summary>
-        /// Prevent leaving the lobby on starting the first game.
+        ///     Prevent leaving the lobby on starting the first game.
         /// </summary>
         [HarmonyPrefix]
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.LeaveLobbyAtGameStart))]
@@ -73,9 +68,9 @@ namespace LobbyControl.Patches
             // Do not run the method that would usually close down the lobby.
             return false;
         }
-        
+
         /// <summary>
-        /// Temporarily close the lobby while a game is ongoing. This prevents people trying to join mid-game.
+        ///     Temporarily close the lobby while a game is ongoing. This prevents people trying to join mid-game.
         /// </summary>
         [HarmonyPrefix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.StartGame))]
@@ -86,16 +81,16 @@ namespace LobbyControl.Patches
                 LobbyControl.Log.LogDebug("Setting lobby to not joinable.");
                 LobbyControl.CanModifyLobby = false;
                 GameNetworkManager.Instance.SetLobbyJoinable(false);
-                
+
                 // Remove the friend invite button in the ESC menu.
                 if (_quickMenuManager == null)
                     _quickMenuManager = Object.FindObjectOfType<QuickMenuManager>();
                 _quickMenuManager.inviteFriendsTextAlpha.alpha = 0f;
             }
         }
-        
+
         /// <summary>
-        /// reset the status if we disconnect
+        ///     reset the status if we disconnect
         /// </summary>
         [HarmonyPostfix]
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.Disconnect))]
@@ -105,7 +100,7 @@ namespace LobbyControl.Patches
         }
 
         /// <summary>
-        /// Reopen the steam lobby after a game has ended.
+        ///     Reopen the steam lobby after a game has ended.
         /// </summary>
         [HarmonyPostfix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.EndOfGame))]
@@ -115,21 +110,20 @@ namespace LobbyControl.Patches
             while (coroutine.MoveNext())
                 yield return coroutine.Current;
             // At this point all players should have been revived and the stats screen should have been shown.
-            
+
             // Nothing to do at all if this is not the host.
             if (!__instance.IsServer)
                 yield break;
-            
+
             // The "getting fired" cutscene runs in a separate coroutine. Ensure we don't open the lobby until after
             // it is over.
             yield return new WaitForSeconds(0.5f);
             yield return new WaitUntil(() => !__instance.firingPlayersCutsceneRunning);
-            
-            
+
+
             LobbyControl.Log.LogDebug("Lobby can be re-openned");
 
             LobbyControl.CanModifyLobby = true;
-            
         }
 
         [HarmonyPrefix]
@@ -137,25 +131,26 @@ namespace LobbyControl.Patches
         private static bool PreventSave(GameNetworkManager __instance)
         {
             if (LobbyControl.CanSave)
-                ES3.Save<bool>("LC_SavingMethod", LobbyControl.AutoSaveEnabled, __instance.currentSaveFileName);
+                ES3.Save("LC_SavingMethod", LobbyControl.AutoSaveEnabled, __instance.currentSaveFileName);
             return LobbyControl.CanSave;
         }
-        
+
         [HarmonyPostfix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.Start))]
         private static void ReadCustomLobbyStatus(StartOfRound __instance)
         {
             if (__instance.IsServer)
-                LobbyControl.AutoSaveEnabled = LobbyControl.CanSave = ES3.Load<bool>("LC_SavingMethod", GameNetworkManager.Instance.currentSaveFileName, true);
-        }        
-        
+                LobbyControl.AutoSaveEnabled = LobbyControl.CanSave = ES3.Load("LC_SavingMethod",
+                    GameNetworkManager.Instance.currentSaveFileName, true);
+        }
+
 
         [HarmonyPrefix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnPlayerConnectedClientRpc))]
         private static bool SkipLocalReconnect(StartOfRound __instance, ulong clientId)
         {
-            return !(__instance.IsServer && __instance.__rpc_exec_stage == NetworkBehaviour.__RpcExecStage.Client && clientId == __instance.localPlayerController.playerClientId);
+            return !(__instance.IsServer && __instance.__rpc_exec_stage == NetworkBehaviour.__RpcExecStage.Client &&
+                     clientId == __instance.localPlayerController.playerClientId);
         }
-
     }
 }

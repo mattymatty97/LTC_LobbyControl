@@ -4,7 +4,7 @@ using Steamworks;
 using Steamworks.Data;
 
 namespace LobbyControl.Patches
-{    
+{
     [HarmonyPatch]
     internal class LobbyPatcher
     {
@@ -16,22 +16,22 @@ namespace LobbyControl.Patches
         private static void TrackOpenStatus(Lobby __instance, object[] __args)
         {
             Open[__instance] = (bool)__args[0];
-        }        
-        
+        }
+
         [HarmonyPostfix]
         [HarmonyPatch(typeof(Lobby), nameof(Lobby.SetPublic))]
         private static void TrackPublicStatus(Lobby __instance)
         {
             Visibility[__instance] = LobbyType.Public;
-        }        
-        
+        }
+
         [HarmonyPostfix]
         [HarmonyPatch(typeof(Lobby), nameof(Lobby.SetPrivate))]
         private static void TrackPrivateStatus(Lobby __instance)
         {
             Visibility[__instance] = LobbyType.Private;
-        }        
-        
+        }
+
         [HarmonyPostfix]
         [HarmonyPatch(typeof(Lobby), nameof(Lobby.SetFriendsOnly))]
         private static void trackFriendsOnly(Lobby __instance)
@@ -43,11 +43,10 @@ namespace LobbyControl.Patches
         {
             return Visibility.ContainsKey(lobby) ? Visibility[lobby] : LobbyType.Private;
         }
-        
+
         public static bool IsOpen(Lobby lobby)
         {
             return Open.ContainsKey(lobby) ? Open.GetValueSafe(lobby) : true;
         }
-        
     }
 }

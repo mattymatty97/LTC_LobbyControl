@@ -2,9 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
-using System.Threading;
 using BepInEx;
-using GameNetcodeStuff;
 using LethalAPI.TerminalCommands.Attributes;
 using LethalAPI.TerminalCommands.Models;
 using LobbyControl.Patches;
@@ -31,37 +29,51 @@ namespace LobbyControl
 
         private static QuickMenuManager _quickMenuManager;
 
-        [TerminalCommand("Lobby"), AllowedCaller(AllowedCaller.Host)]
+        [TerminalCommand("Lobby")]
+        [AllowedCaller(AllowedCaller.Host)]
         public TerminalNode Lobby()
         {
-            TerminalNode node = ScriptableObject.CreateInstance<TerminalNode>();
+            var node = ScriptableObject.CreateInstance<TerminalNode>();
             node.displayText = "Invalid command:" + DefaultText;
             node.clearPreviousText = true;
             node.maxCharactersToType = node.displayText.Length + 2;
             return node;
         }
 
-        [TerminalCommand("Lobby"), CommandInfo("Controls the Lobby status", "[command] (lobby name)"),
-         AllowedCaller(AllowedCaller.Host)]
+        [TerminalCommand("Lobby")]
+        [CommandInfo("Controls the Lobby status", "[command] (lobby name)")]
+        [AllowedCaller(AllowedCaller.Host)]
         public TerminalNode Lobby([RemainingText] string text)
         {
-            var node = ScriptableObject.CreateInstance<TerminalNode>();
-            try
+            bool PerformOrbitCheck(TerminalNode terminalNode, out TerminalNode lobby1)
             {
                 if (!StartOfRound.Instance.inShipPhase)
                 {
-                    node.displayText = "Can only be used while in Orbit";
-                    return node;
+                    terminalNode.displayText = "Can only be used while in Orbit";
+                    {
+                        lobby1 = terminalNode;
+                        return true;
+                    }
                 }
 
                 if (!GameNetworkManager.Instance.currentLobby.HasValue)
                 {
-                    node.displayText = "Lobby does not exist";
-                    return node;
+                    terminalNode.displayText = "Lobby does not exist";
+                    {
+                        lobby1 = terminalNode;
+                        return true;
+                    }
                 }
 
+                lobby1 = null;
+                return false;
+            }
+
+            var node = ScriptableObject.CreateInstance<TerminalNode>();
+            try
+            {
                 if (text.IsNullOrWhiteSpace())
-                    return this.Lobby();
+                    return Lobby();
 
                 var sub = text.Trim().Split()[0].Trim().ToLower();
                 var remaining = text.Substring(sub.Length).Trim();
@@ -85,7 +97,7 @@ namespace LobbyControl
                         var name = lobby.GetData("name");
                         var autoSave = LobbyControl.CanSave;
 
-                        StringBuilder builder = new StringBuilder("Lobby Status:");
+                        var builder = new StringBuilder("Lobby Status:");
                         builder.Append("\n- File is '").Append(manager.currentSaveFileName).Append("'");
                         builder.Append("\n- Name is '").Append(name).Append("'");
                         builder.Append("\n- Status is ").Append(status ? "Open" : "Closed");
@@ -97,6 +109,9 @@ namespace LobbyControl
                     }
                     case "open":
                     {
+                        if (PerformOrbitCheck(node, out var lobby1)) 
+                            return lobby1;
+                        
                         if (!LobbyControl.CanModifyLobby)
                         {
                             node.displayText = "Lobby cannot be changed at the moment";
@@ -128,6 +143,9 @@ namespace LobbyControl
                     }
                     case "close":
                     {
+                        if (PerformOrbitCheck(node, out var lobby1)) 
+                            return lobby1;
+                        
                         if (!LobbyControl.CanModifyLobby)
                         {
                             node.displayText = "Lobby cannot be changed at the moment";
@@ -158,6 +176,9 @@ namespace LobbyControl
                     }
                     case "private":
                     {
+                        if (PerformOrbitCheck(node, out var lobby1)) 
+                            return lobby1;
+                        
                         if (!LobbyControl.CanModifyLobby)
                         {
                             node.displayText = "Lobby cannot be changed at the moment";
@@ -182,6 +203,9 @@ namespace LobbyControl
                     }
                     case "friend":
                     {
+                        if (PerformOrbitCheck(node, out var lobby1)) 
+                            return lobby1;
+                        
                         if (!LobbyControl.CanModifyLobby)
                         {
                             node.displayText = "Lobby cannot be changed at the moment";
@@ -207,6 +231,9 @@ namespace LobbyControl
                     }
                     case "public":
                     {
+                        if (PerformOrbitCheck(node, out var lobby1)) 
+                            return lobby1;
+                        
                         if (!LobbyControl.CanModifyLobby)
                         {
                             node.displayText = "Lobby cannot be changed at the moment";
@@ -231,6 +258,9 @@ namespace LobbyControl
                     }
                     case "rename":
                     {
+                        if (PerformOrbitCheck(node, out var lobby1)) 
+                            return lobby1;
+                        
                         if (remaining.IsNullOrWhiteSpace())
                         {
                             node.displayText = "Lobby name cannot be null";
@@ -255,7 +285,7 @@ namespace LobbyControl
                         }
 
                         manager.lobbyHostSettings.lobbyName = remaining;
-                        manager.currentLobby.Value.SetData("name", manager.lobbyHostSettings.lobbyName.ToString());
+                        manager.currentLobby.Value.SetData("name", manager.lobbyHostSettings.lobbyName);
                         manager.steamLobbyName = manager.currentLobby.Value.GetData("name");
 
                         ES3.Save<string>("HostSettings_Name", manager.steamLobbyName, "LCGeneralSaveData");
@@ -287,6 +317,9 @@ namespace LobbyControl
                     }
                     case "save":
                     {
+                        if (PerformOrbitCheck(node, out var lobby1)) 
+                            return lobby1;
+                        
                         if (!LobbyControl.CanModifyLobby)
                         {
                             node.displayText = "Lobby cannot be saved at the moment";
@@ -316,9 +349,7 @@ namespace LobbyControl
                         }
 
                         if (oldSaveFileName != manager.currentSaveFileName)
-                        {
                             ES3.CopyFile(oldSaveFileName, manager.currentSaveFileName);
-                        }
 
                         LobbyControl.CanSave = true;
                         HUDManager.Instance.saveDataIconAnimatorB.SetTrigger("save");
@@ -335,6 +366,9 @@ namespace LobbyControl
                     }
                     case "load":
                     {
+                        if (PerformOrbitCheck(node, out var lobby1)) 
+                            return lobby1;
+                        
                         if (!LobbyControl.CanModifyLobby)
                         {
                             node.displayText = "Lobby cannot be modified at the moment";
@@ -367,8 +401,8 @@ namespace LobbyControl
 
                         if (ES3.FileExists(manager.currentSaveFileName))
                         {
-                            StartOfRound startOfRound = StartOfRound.Instance;
-                            Terminal terminal = Object.FindObjectOfType<Terminal>();
+                            var startOfRound = StartOfRound.Instance;
+                            var terminal = Object.FindObjectOfType<Terminal>();
                             //remove all items
                             startOfRound.ResetShipFurniture();
                             startOfRound.ResetPooledObjects(true);
@@ -382,7 +416,7 @@ namespace LobbyControl
                             RefreshLobby();
                             startOfRound.SyncShipUnlockablesServerRpc();
                             startOfRound.SyncSuitsServerRpc();
-                            LobbyControl.AutoSaveEnabled = LobbyControl.CanSave = ES3.Load<bool>("LC_SavingMethod",
+                            LobbyControl.AutoSaveEnabled = LobbyControl.CanSave = ES3.Load("LC_SavingMethod",
                                 GameNetworkManager.Instance.currentSaveFileName, true);
 
                             LobbyControl.Log.LogInfo(outText);
@@ -406,13 +440,13 @@ namespace LobbyControl
                         break;
                     }
                     default:
-                        node = this.Lobby();
+                        node = Lobby();
                         break;
                 }
             }
             catch (Exception ex)
             {
-                LobbyControl.Log.LogError("Exception:\n" + ex.ToString());
+                LobbyControl.Log.LogError("Exception:\n" + ex);
                 node.displayText = "Exception!";
             }
 
@@ -421,11 +455,11 @@ namespace LobbyControl
 
         private static void RefreshLobby()
         {
-            StartOfRound startOfRound = StartOfRound.Instance;
+            var startOfRound = StartOfRound.Instance;
             List<ulong> ulongList = new List<ulong>();
             for (var index = 0; index < startOfRound.allPlayerObjects.Length; ++index)
             {
-                NetworkObject component = startOfRound.allPlayerObjects[index].GetComponent<NetworkObject>();
+                var component = startOfRound.allPlayerObjects[index].GetComponent<NetworkObject>();
                 if (!component.IsOwnedByServer)
                     ulongList.Add(component.OwnerClientId);
                 else if (index == 0)
@@ -434,11 +468,10 @@ namespace LobbyControl
                     ulongList.Add(999UL);
             }
 
-            var groupCredits = UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits;
+            var groupCredits = Object.FindObjectOfType<Terminal>().groupCredits;
             var profitQuota = TimeOfDay.Instance.profitQuota;
             var quotaFulfilled = TimeOfDay.Instance.quotaFulfilled;
             var timeUntilDeadline = (int)TimeOfDay.Instance.timeUntilDeadline;
-            //startOfRound.StartCoroutine(RefreshLobbyCoroutine(startOfRound, ulongList, groupCredits, profitQuota, timeUntilDeadline, quotaFulfilled));
             var controller = StartOfRound.Instance.localPlayerController;
             startOfRound.OnPlayerConnectedClientRpc(controller.playerClientId, startOfRound.connectedPlayersAmount - 1,
                 ulongList.ToArray(), startOfRound.ClientPlayerList[controller.playerClientId], groupCredits,
@@ -446,22 +479,5 @@ namespace LobbyControl
                 startOfRound.randomMapSeed, startOfRound.isChallengeFile);
         }
 
-        private static IEnumerator RefreshLobbyCoroutine(StartOfRound startOfRound, List<ulong> ulongList,
-            int groupCredits, int profitQuota,
-            int timeUntilDeadline, int quotaFulfilled)
-        {
-            for (var index = 0; index < startOfRound.allPlayerObjects.Length; ++index)
-            {
-                var controller = startOfRound.allPlayerScripts[index];
-                if (controller.IsOwnedByServer)
-                    continue;
-                startOfRound.OnClientDisconnectClientRpc(index, controller.playerClientId);
-                startOfRound.OnPlayerConnectedClientRpc(controller.playerClientId,
-                    startOfRound.connectedPlayersAmount - 1, ulongList.ToArray(), index, groupCredits,
-                    startOfRound.currentLevelID, profitQuota, timeUntilDeadline, quotaFulfilled,
-                    startOfRound.randomMapSeed, startOfRound.isChallengeFile);
-                yield return new WaitForSeconds(5f);
-            }
-        }
     }
 }

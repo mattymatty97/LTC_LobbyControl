@@ -8,7 +8,12 @@ namespace LobbyControl.Patches
     [HarmonyPatch]
     internal class RadarPatch
     {
-        private static bool UpdateNextTick = false;
+        private static bool UpdateNextTick;
+
+        private static readonly Vector3 DespawnDelta = new Vector3(0, -10000, 0);
+
+        private static readonly Dictionary<NetworkObject, bool>
+            DeferredDespawns = new Dictionary<NetworkObject, bool>();
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.LoadShipGrabbableItems))]
@@ -26,73 +31,59 @@ namespace LobbyControl.Patches
 
             UpdateNextTick = false;
 
-            GrabbableObject[] objects = UnityEngine.Object.FindObjectsOfType<GrabbableObject>();
+            GrabbableObject[] objects = Object.FindObjectsOfType<GrabbableObject>();
 
-            foreach (GrabbableObject itemObject in objects)
-            {
+            foreach (var itemObject in objects)
                 if (itemObject.radarIcon != null && itemObject.radarIcon.gameObject != null)
-                {
                     Object.Destroy(itemObject.radarIcon.gameObject);
-                }
-            }
         }
 
         [HarmonyPrefix]
         [HarmonyPatch(typeof(NetworkBehaviour), nameof(NetworkBehaviour.OnDestroy))]
         public static void DestroyPatch(NetworkBehaviour __instance)
         {
-            GrabbableObject obj = __instance as GrabbableObject;
+            var obj = __instance as GrabbableObject;
             if (obj != null && obj.radarIcon != null && obj.radarIcon.gameObject != null)
-            {
                 Object.Destroy(obj.radarIcon.gameObject);
-            }
         }
-
-        private static readonly Vector3 DespawnDelta = new Vector3(0, -10000, 0);
 
         [HarmonyPrefix]
         [HarmonyPatch(typeof(RoundManager), nameof(RoundManager.DespawnPropsAtEndOfRound))]
         public static void DespawnPatch(RoundManager __instance, bool despawnAllItems)
         {
-            if (!__instance.IsServer) 
+            if (!__instance.IsServer)
                 return;
-            
-            GrabbableObject[] objectsOfType = UnityEngine.Object.FindObjectsOfType<GrabbableObject>();
+
+            GrabbableObject[] objectsOfType = Object.FindObjectsOfType<GrabbableObject>();
             foreach (var grabbable in objectsOfType)
             {
                 if (!despawnAllItems && (grabbable.isHeld || grabbable.isInShipRoom) &&
                     !grabbable.deactivated && (!StartOfRound.Instance.allPlayersDead ||
-                                       !grabbable.itemProperties.isScrap)) 
+                                               !grabbable.itemProperties.isScrap))
                     continue;
-                
-                NetworkObject component = grabbable.gameObject.GetComponent<NetworkObject>();
-                if (component != null && component.IsSpawned)
-                {
-                    component.transform.position -= DespawnDelta;
-                }
+
+                var component = grabbable.gameObject.GetComponent<NetworkObject>();
+                if (component != null && component.IsSpawned) component.transform.position -= DespawnDelta;
             }
         }
-        
+
         [HarmonyPrefix]
         [HarmonyPatch(typeof(DepositItemsDesk), nameof(DepositItemsDesk.CheckAllPlayersSoldItemsServerRpc))]
         public static void DespawnPatch(DepositItemsDesk __instance)
         {
-            NetworkManager networkManager = __instance.NetworkManager;
+            var networkManager = __instance.NetworkManager;
             if (networkManager == null || !networkManager.IsListening)
                 return;
-            
-            if (__instance.__rpc_exec_stage != NetworkBehaviour.__RpcExecStage.Server || !networkManager.IsServer && !networkManager.IsHost)
+
+            if (__instance.__rpc_exec_stage != NetworkBehaviour.__RpcExecStage.Server ||
+                (!networkManager.IsServer && !networkManager.IsHost))
                 return;
-            
-            for (int index = 0; index < __instance.itemsOnCounterNetworkObjects.Count; ++index)
-            {
-                if (__instance.itemsOnCounterNetworkObjects[index].IsSpawned)
-                    __instance.itemsOnCounterNetworkObjects[index].transform.position -= DespawnDelta;
-            }
+
+            foreach (var networkObject in __instance.itemsOnCounterNetworkObjects)
+                if (networkObject.IsSpawned)
+                    networkObject.transform.position -= DespawnDelta;
         }
 
-        private static readonly Dictionary<NetworkObject, bool> DeferredDespawns = new Dictionary<NetworkObject, bool>();
-        
         [HarmonyPrefix]
         [HarmonyPatch(typeof(NetworkObject), nameof(NetworkObject.Despawn))]
         public static bool DeferDespawnPatch(NetworkObject __instance, bool destroy)
@@ -106,17 +97,15 @@ namespace LobbyControl.Patches
                 DeferredDespawns[__instance] = destroy;
                 return false;
             }
+
             return true;
-        }        
-        
+        }
+
         [HarmonyPostfix]
         [HarmonyPatch(typeof(NetworkObject), nameof(NetworkObject.Update))]
         public static void DeferDespawnPatch2(NetworkObject __instance)
         {
-            if (DeferredDespawns.TryGetValue(__instance, out var destroy))
-            {
-                __instance.Despawn(destroy);
-            }
+            if (DeferredDespawns.TryGetValue(__instance, out var destroy)) __instance.Despawn(destroy);
         }
     }
 }
