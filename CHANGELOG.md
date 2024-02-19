@@ -1,3 +1,8 @@
+## v2.2.0
+- Added Experimental HotLoad of the lobby
+- Added Fixes for various Radar Bugs
+- Added Fix for invisible Players
+
 ## v2.1.1
 - Full support of lobby status
 - Addition to ste AutoSaving status and manual save command

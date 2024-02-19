@@ -132,11 +132,6 @@ namespace LobbyControl
 
                         LobbyControl.Log.LogInfo(outText);
 
-                        // Restore the friend invite button in the ESC menu.
-                        if (_quickMenuManager == null)
-                            _quickMenuManager = Object.FindObjectOfType<QuickMenuManager>();
-                        _quickMenuManager.inviteFriendsTextAlpha.alpha = 1f;
-
                         node.displayText = outText;
                         node.maxCharactersToType = node.displayText.Length + 2;
                         break;
@@ -166,10 +161,6 @@ namespace LobbyControl
 
                         LobbyControl.Log.LogInfo(outText);
 
-                        // Remove the friend invite button in the ESC menu.
-                        if (_quickMenuManager == null)
-                            _quickMenuManager = Object.FindObjectOfType<QuickMenuManager>();
-                        _quickMenuManager.inviteFriendsTextAlpha.alpha = 0f;
                         node.displayText = outText;
                         node.maxCharactersToType = node.displayText.Length + 2;
                         break;
