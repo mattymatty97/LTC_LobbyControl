@@ -90,17 +90,17 @@ namespace LobbyControl.Patches
         }
 
         /// <summary>
-        ///     reset the status if we disconnect
+        ///     reset the status on a new Lobby
         /// </summary>
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.Disconnect))]
-        private static void ResetStatus(GameNetworkManager __instance)
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.Start))]
+        private static void ResetStatus(StartOfRound __instance)
         {
             LobbyControl.CanModifyLobby = true;
         }
 
         /// <summary>
-        ///     Reopen the steam lobby after a game has ended.
+        ///     Allow to reopen the steam lobby after a game has ended.
         /// </summary>
         [HarmonyPostfix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.EndOfGame))]
@@ -124,27 +124,17 @@ namespace LobbyControl.Patches
             LobbyControl.Log.LogDebug("Lobby can be re-openned");
 
             LobbyControl.CanModifyLobby = true;
+
+            // Restore the friend invite button in the ESC menu.
+            if (_quickMenuManager == null)
+                _quickMenuManager = Object.FindObjectOfType<QuickMenuManager>();
+            _quickMenuManager.inviteFriendsTextAlpha.alpha = 1f;
         }
-
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.SaveGame))]
-        private static bool PreventSave(GameNetworkManager __instance)
-        {
-            if (LobbyControl.CanSave)
-                ES3.Save("LC_SavingMethod", LobbyControl.AutoSaveEnabled, __instance.currentSaveFileName);
-            return LobbyControl.CanSave;
-        }
-
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.Start))]
-        private static void ReadCustomLobbyStatus(StartOfRound __instance)
-        {
-            if (__instance.IsServer)
-                LobbyControl.AutoSaveEnabled = LobbyControl.CanSave = ES3.Load("LC_SavingMethod",
-                    GameNetworkManager.Instance.currentSaveFileName, true);
-        }
-
-
+        
+        /// <summary>
+        ///     Skip handling the new Connection if it comes from us and we are the Host.
+        ///     Should only happen if we're trying to reLoad the lobby
+        /// </summary>
         [HarmonyPrefix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnPlayerConnectedClientRpc))]
         private static bool SkipLocalReconnect(StartOfRound __instance, ulong clientId)

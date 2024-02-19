@@ -46,7 +46,7 @@ namespace LobbyControl.Patches
 
         public static bool IsOpen(Lobby lobby)
         {
-            return Open.ContainsKey(lobby) ? Open.GetValueSafe(lobby) : true;
+            return !Open.ContainsKey(lobby) || Open.GetValueSafe(lobby);
         }
     }
 }

@@ -12,7 +12,7 @@ namespace LobbyControl.Patches
 
         [HarmonyPrefix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnPlayerDC))]
-        private static void TrackDC(StartOfRound __instance, int playerObjectNumber, ulong clientId)
+        private static void TrackDc(StartOfRound __instance, int playerObjectNumber, ulong clientId)
         {
             if (__instance.IsServer && !__instance.inShipPhase &&
                 __instance.allPlayerScripts[playerObjectNumber].isPlayerDead)
@@ -21,7 +21,7 @@ namespace LobbyControl.Patches
 
         [HarmonyPrefix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.ShipHasLeft))]
-        private static void respawnDCPlayer(StartOfRound __instance)
+        private static void RespawnDcPlayer(StartOfRound __instance)
         {
             if (!__instance.IsServer || TrackedPlayers.Count <= 0)
                 return;
@@ -52,13 +52,15 @@ namespace LobbyControl.Patches
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.EndOfGame))]
-        private static void clearDCPlayer(StartOfRound __instance)
+        private static void ClearDcPlayer(StartOfRound __instance)
         {
             if (!__instance.IsServer || TrackedPlayers.Count <= 0)
                 return;
 
             foreach (KeyValuePair<int, ulong> dcPlayer in TrackedPlayers)
                 __instance.OnClientDisconnectClientRpc(dcPlayer.Key, dcPlayer.Value);
+            
+            TrackedPlayers.Clear();
         }
     }
 }
