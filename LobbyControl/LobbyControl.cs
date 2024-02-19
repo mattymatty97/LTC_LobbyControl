@@ -72,7 +72,7 @@ namespace LobbyControl
                                 SpawnShipUnlockable(numArray[index]);
                         }
 
-                    var objectsOfType = FindObjectsOfType<PlaceableShipObject>();
+                    PlaceableShipObject[] objectsOfType = FindObjectsOfType<PlaceableShipObject>();
                     for (var index = 0; index < objectsOfType.Length; ++index)
                         if (!StartOfRound.Instance.unlockablesList.unlockables[objectsOfType[index].unlockableID]
                                 .spawnPrefab && StartOfRound.Instance.unlockablesList
@@ -154,7 +154,7 @@ namespace LobbyControl
                             .unlockablesList.unlockables[unlockableIndex].unlockableName);
                         if (gameObject == null)
                         {
-                            var objectsOfType =
+                            PlaceableShipObject[] objectsOfType =
                                 FindObjectsOfType<PlaceableShipObject>();
                             for (var index = 0; index < objectsOfType.Length; ++index)
                                 if (objectsOfType[index].unlockableID == unlockableIndex)

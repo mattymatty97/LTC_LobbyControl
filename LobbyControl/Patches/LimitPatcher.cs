@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.Emit;
 using HarmonyLib;
 
 namespace LobbyControl.Patches
@@ -13,13 +11,13 @@ namespace LobbyControl.Patches
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.SyncShipUnlockablesServerRpc))]
         private static IEnumerable<CodeInstruction> SyncUnlockablesPatch(IEnumerable<CodeInstruction> instructions)
         {
-            var codes = new List<CodeInstruction>(instructions);
-            bool found = false;
+            List<CodeInstruction> codes = new List<CodeInstruction>(instructions);
+            var found = false;
             try
             {
                 for (var i = 0; i < codes.Count; i++)
                 {
-                    CodeInstruction curr = codes[i];
+                    var curr = codes[i];
                     if (curr.LoadsConstant(250))
                     {
                         curr.operand = int.MaxValue;
@@ -28,14 +26,9 @@ namespace LobbyControl.Patches
                 }
 
                 if (!found)
-                {
                     LobbyControl.Log.LogError(nameof(SyncUnlockablesPatch) + "failed to Patch");
-                }
                 else
-                {
-
                     LobbyControl.Log.LogWarning(nameof(SyncUnlockablesPatch) + "successfully Patched");
-                }
             }
             catch (Exception ex)
             {
