@@ -149,5 +149,13 @@ namespace LobbyControl.Patches
                 LobbyControl.AutoSaveEnabled = LobbyControl.CanSave = ES3.Load<bool>("LC_SavingMethod", GameNetworkManager.Instance.currentSaveFileName, true);
         }        
         
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnPlayerConnectedClientRpc))]
+        private static bool SkipLocalReconnect(StartOfRound __instance, ulong clientId)
+        {
+            return !(__instance.IsServer && __instance.__rpc_exec_stage == NetworkBehaviour.__RpcExecStage.Client && clientId == __instance.localPlayerController.playerClientId);
+        }
+
     }
 }

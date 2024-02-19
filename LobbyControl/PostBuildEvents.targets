@@ -20,6 +20,8 @@
         <Reference Include="..\Dependencies\Assembly-CSharp.dll" Publicize="true" />
         <Reference Include="..\Dependencies\Assembly-CSharp-firstpass.dll" Publicize="true" />
         <Reference Include="..\Dependencies\Facepunch.Steamworks.Win64.dll" Publicize="true" />
+        <Reference Include="..\Dependencies\Unity.Netcode.Runtime.dll" Publicize="true" />
+        <Reference Include="..\Dependencies\Unity.Netcode.Components.dll" Publicize="true" />
 
         <!-- clean referencing -->
         <Reference Include="..\Dependencies\Unity.TextMeshPro.dll" Publicize="false" />
