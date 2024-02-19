@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
@@ -39,8 +40,9 @@ namespace LobbyControl
             node.maxCharactersToType = node.displayText.Length + 2;
             return node;
         }
-        
-        [TerminalCommand("Lobby"), CommandInfo("Controls the Lobby status", "[command] (lobby name)"), AllowedCaller(AllowedCaller.Host)]
+
+        [TerminalCommand("Lobby"), CommandInfo("Controls the Lobby status", "[command] (lobby name)"),
+         AllowedCaller(AllowedCaller.Host)]
         public TerminalNode Lobby([RemainingText] string text)
         {
             var node = ScriptableObject.CreateInstance<TerminalNode>();
@@ -255,8 +257,8 @@ namespace LobbyControl
                         manager.lobbyHostSettings.lobbyName = remaining;
                         manager.currentLobby.Value.SetData("name", manager.lobbyHostSettings.lobbyName.ToString());
                         manager.steamLobbyName = manager.currentLobby.Value.GetData("name");
-                        
-                        ES3.Save<string>("HostSettings_Name", manager.steamLobbyName,"LCGeneralSaveData");
+
+                        ES3.Save<string>("HostSettings_Name", manager.steamLobbyName, "LCGeneralSaveData");
 
                         var outText = "Lobby renamed to \"" + remaining + "\"";
                         LobbyControl.Log.LogInfo(outText);
@@ -271,9 +273,8 @@ namespace LobbyControl
                     }
                     case "autosave":
                     {
-
                         LobbyControl.Log.LogDebug("Toggling AutoSave");
-                        
+
                         LobbyControl.CanSave = LobbyControl.AutoSaveEnabled = !LobbyControl.AutoSaveEnabled;
 
                         var outText = "AutoSaving is now " + (LobbyControl.CanSave ? "On" : "Off");
@@ -291,7 +292,7 @@ namespace LobbyControl
                             node.displayText = "Lobby cannot be saved at the moment";
                             break;
                         }
-                        
+
                         if (StartOfRound.Instance.isChallengeFile)
                         {
                             node.displayText = "Cannot Edit Challenge Save";
@@ -316,7 +317,7 @@ namespace LobbyControl
 
                         if (oldSaveFileName != manager.currentSaveFileName)
                         {
-                            ES3.CopyFile(oldSaveFileName,manager.currentSaveFileName);
+                            ES3.CopyFile(oldSaveFileName, manager.currentSaveFileName);
                         }
 
                         LobbyControl.CanSave = true;
@@ -339,7 +340,7 @@ namespace LobbyControl
                             node.displayText = "Lobby cannot be modified at the moment";
                             break;
                         }
-                        
+
                         if (StartOfRound.Instance.isChallengeFile)
                         {
                             node.displayText = "Cannot Edit Challenge Save";
@@ -363,7 +364,7 @@ namespace LobbyControl
                         }
 
                         var outText = "Lobby \'" + manager.currentSaveFileName + "\' loaded";
-                        
+
                         if (ES3.FileExists(manager.currentSaveFileName))
                         {
                             StartOfRound startOfRound = StartOfRound.Instance;
@@ -379,9 +380,11 @@ namespace LobbyControl
                             //sync the new values
                             startOfRound.SetMapScreenInfoToCurrentLevel();
                             RefreshLobby();
+                            startOfRound.SyncShipUnlockablesServerRpc();
                             startOfRound.SyncSuitsServerRpc();
-                            LobbyControl.AutoSaveEnabled = LobbyControl.CanSave = ES3.Load<bool>("LC_SavingMethod", GameNetworkManager.Instance.currentSaveFileName, true);
-                            
+                            LobbyControl.AutoSaveEnabled = LobbyControl.CanSave = ES3.Load<bool>("LC_SavingMethod",
+                                GameNetworkManager.Instance.currentSaveFileName, true);
+
                             LobbyControl.Log.LogInfo(outText);
                         }
                         else
@@ -390,11 +393,11 @@ namespace LobbyControl
                             LobbyControl.Log.LogError(outText);
                             manager.currentSaveFileName = oldSaveFileName;
                         }
-                        
+
                         node.displayText = outText;
                         node.maxCharactersToType = node.displayText.Length + 2;
                         break;
-                }
+                    }
                     case "help":
                     {
                         node.displayText = DefaultText;
@@ -412,6 +415,7 @@ namespace LobbyControl
                 LobbyControl.Log.LogError("Exception:\n" + ex.ToString());
                 node.displayText = "Exception!";
             }
+
             return node;
         }
 
@@ -419,7 +423,7 @@ namespace LobbyControl
         {
             StartOfRound startOfRound = StartOfRound.Instance;
             List<ulong> ulongList = new List<ulong>();
-            for (int index = 0; index < startOfRound.allPlayerObjects.Length; ++index)
+            for (var index = 0; index < startOfRound.allPlayerObjects.Length; ++index)
             {
                 NetworkObject component = startOfRound.allPlayerObjects[index].GetComponent<NetworkObject>();
                 if (!component.IsOwnedByServer)
@@ -428,22 +432,35 @@ namespace LobbyControl
                     ulongList.Add(NetworkManager.Singleton.LocalClientId);
                 else
                     ulongList.Add(999UL);
-            }     
-            int groupCredits = UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits;
-            int profitQuota = TimeOfDay.Instance.profitQuota;
-            int quotaFulfilled = TimeOfDay.Instance.quotaFulfilled;
-            int timeUntilDeadline = (int) TimeOfDay.Instance.timeUntilDeadline;
-            for (int index = 0; index < startOfRound.allPlayerObjects.Length; ++index)
+            }
+
+            var groupCredits = UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits;
+            var profitQuota = TimeOfDay.Instance.profitQuota;
+            var quotaFulfilled = TimeOfDay.Instance.quotaFulfilled;
+            var timeUntilDeadline = (int)TimeOfDay.Instance.timeUntilDeadline;
+            //startOfRound.StartCoroutine(RefreshLobbyCoroutine(startOfRound, ulongList, groupCredits, profitQuota, timeUntilDeadline, quotaFulfilled));
+            var controller = StartOfRound.Instance.localPlayerController;
+            startOfRound.OnPlayerConnectedClientRpc(controller.playerClientId, startOfRound.connectedPlayersAmount - 1,
+                ulongList.ToArray(), startOfRound.ClientPlayerList[controller.playerClientId], groupCredits,
+                startOfRound.currentLevelID, profitQuota, timeUntilDeadline, quotaFulfilled,
+                startOfRound.randomMapSeed, startOfRound.isChallengeFile);
+        }
+
+        private static IEnumerator RefreshLobbyCoroutine(StartOfRound startOfRound, List<ulong> ulongList,
+            int groupCredits, int profitQuota,
+            int timeUntilDeadline, int quotaFulfilled)
+        {
+            for (var index = 0; index < startOfRound.allPlayerObjects.Length; ++index)
             {
-                PlayerControllerB controller = startOfRound.allPlayerScripts[index];
-                if (!controller.IsOwnedByServer)
-                {
-                    startOfRound.OnPlayerConnectedClientRpc(controller.playerClientId,
-                        startOfRound.connectedPlayersAmount - 1, ulongList.ToArray(), index, groupCredits,
-                        startOfRound.currentLevelID, profitQuota, timeUntilDeadline, quotaFulfilled,
-                        startOfRound.randomMapSeed, startOfRound.isChallengeFile);
-                    startOfRound.SyncAlreadyHeldObjectsServerRpc(index);
-                }
+                var controller = startOfRound.allPlayerScripts[index];
+                if (controller.IsOwnedByServer)
+                    continue;
+                startOfRound.OnClientDisconnectClientRpc(index, controller.playerClientId);
+                startOfRound.OnPlayerConnectedClientRpc(controller.playerClientId,
+                    startOfRound.connectedPlayersAmount - 1, ulongList.ToArray(), index, groupCredits,
+                    startOfRound.currentLevelID, profitQuota, timeUntilDeadline, quotaFulfilled,
+                    startOfRound.randomMapSeed, startOfRound.isChallengeFile);
+                yield return new WaitForSeconds(5f);
             }
         }
     }
