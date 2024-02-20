@@ -246,7 +246,7 @@ namespace LobbyControl.Patches
         [HarmonyPatch(typeof(StartOfRound))]
         public class StartOfRoundPatch
         {
-            private static bool UpdateNextTick;
+            private static bool _updateNextTick;
 
             [HarmonyPostfix]
             [HarmonyPatch(nameof(StartOfRound.Awake))]
@@ -266,17 +266,17 @@ namespace LobbyControl.Patches
             [HarmonyPatch(nameof(StartOfRound.LoadShipGrabbableItems))]
             public static void GrabbablePatch(StartOfRound __instance)
             {
-                UpdateNextTick = true;
+                _updateNextTick = true;
             }
 
             [HarmonyPostfix]
             [HarmonyPatch(nameof(StartOfRound.Update))]
             public static void UpdatePatch(StartOfRound __instance)
             {
-                if (!__instance.IsServer || !UpdateNextTick)
+                if (!__instance.IsServer || !_updateNextTick)
                     return;
 
-                UpdateNextTick = false;
+                _updateNextTick = false;
 
                 GrabbableObject[] objects = Object.FindObjectsOfType<GrabbableObject>();
 
