@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using BepInEx;
@@ -9,6 +8,8 @@ using LobbyControl.Patches;
 using Unity.Netcode;
 using UnityEngine;
 using Object = UnityEngine.Object;
+// ReSharper disable MemberCanBePrivate.Global
+// ReSharper disable MemberCanBeMadeStatic.Global
 
 namespace LobbyControl
 {
@@ -45,30 +46,6 @@ namespace LobbyControl
         [AllowedCaller(AllowedCaller.Host)]
         public TerminalNode Lobby([RemainingText] string text)
         {
-            bool PerformOrbitCheck(TerminalNode terminalNode, out TerminalNode lobby1)
-            {
-                if (!StartOfRound.Instance.inShipPhase)
-                {
-                    terminalNode.displayText = "Can only be used while in Orbit";
-                    {
-                        lobby1 = terminalNode;
-                        return true;
-                    }
-                }
-
-                if (!GameNetworkManager.Instance.currentLobby.HasValue)
-                {
-                    terminalNode.displayText = "Lobby does not exist";
-                    {
-                        lobby1 = terminalNode;
-                        return true;
-                    }
-                }
-
-                lobby1 = null;
-                return false;
-            }
-
             var node = ScriptableObject.CreateInstance<TerminalNode>();
             try
             {
@@ -395,7 +372,7 @@ namespace LobbyControl
                             var startOfRound = StartOfRound.Instance;
                             var terminal = Object.FindObjectOfType<Terminal>();
                             //remove all items
-                            startOfRound.ResetShipFurniture();
+                            startOfRound.ResetShipFurniture(onlyClearBoughtFurniture: true);
                             startOfRound.ResetPooledObjects(true);
                             //try reload the save file
                             startOfRound.SetTimeAndPlanetToSavedSettings();
@@ -442,6 +419,30 @@ namespace LobbyControl
             }
 
             return node;
+
+            bool PerformOrbitCheck(TerminalNode terminalNode, out TerminalNode lobby1)
+            {
+                if (!StartOfRound.Instance.inShipPhase)
+                {
+                    terminalNode.displayText = "Can only be used while in Orbit";
+                    {
+                        lobby1 = terminalNode;
+                        return true;
+                    }
+                }
+
+                if (!GameNetworkManager.Instance.currentLobby.HasValue)
+                {
+                    terminalNode.displayText = "Lobby does not exist";
+                    {
+                        lobby1 = terminalNode;
+                        return true;
+                    }
+                }
+
+                lobby1 = null;
+                return false;
+            }
         }
 
         private static void RefreshLobby()

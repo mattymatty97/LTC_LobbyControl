@@ -14,29 +14,43 @@ namespace LobbyControl.Patches
         internal class NewItemPatch
         {
             
-            private static bool _updateNextTick;
+            private static bool _loadingLobby;
+
+            private static readonly HashSet<GrabbableObject> ObjectsToUpdate = new HashSet<GrabbableObject>();
+            
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.LoadShipGrabbableItems))]
+            public static void TrackSpawn(StartOfRound __instance)
+            {
+                _loadingLobby = true;
+            }            
             
             [HarmonyPostfix]
             [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.LoadShipGrabbableItems))]
-            public static void GrabbablePatch(StartOfRound __instance)
+            public static void TrackSpawn2(StartOfRound __instance)
             {
-                _updateNextTick = true;
+                _loadingLobby = false;
             }
-
-            [HarmonyPostfix]
-            [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.Update))]
-            public static void UpdatePatch(StartOfRound __instance)
+            
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.SetScrapValue))]
+            public static void TrackNew(GrabbableObject __instance)
             {
-                if (!__instance.IsServer || !_updateNextTick)
+                if (!_loadingLobby)
                     return;
 
-                _updateNextTick = false;
-
-                GrabbableObject[] objects = Object.FindObjectsOfType<GrabbableObject>();
-
-                foreach (var itemObject in objects)
-                    if (itemObject.radarIcon != null && itemObject.radarIcon.gameObject != null)
-                        Object.Destroy(itemObject.radarIcon.gameObject);
+                ObjectsToUpdate.Add(__instance);
+            }
+            
+            [HarmonyPostfix]
+            [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.Update))]
+            public static void UpdatePatch(GrabbableObject __instance)
+            {
+                if (!__instance.IsServer || !ObjectsToUpdate.Remove(__instance))
+                    return;
+                
+                if (__instance.radarIcon != null && __instance.radarIcon.gameObject != null)
+                        Object.Destroy(__instance.radarIcon.gameObject);
             }
         }
 
@@ -50,77 +64,6 @@ namespace LobbyControl.Patches
                 var obj = __instance as GrabbableObject;
                 if (obj != null && obj.radarIcon != null && obj.radarIcon.gameObject != null)
                     Object.Destroy(obj.radarIcon.gameObject);
-            }
-        }
-
-        [HarmonyPatch]
-        internal class DespawnPatch
-        {
-            private static readonly Vector3 DespawnDelta = new Vector3(0, -10000, 0);
-
-            private static readonly Dictionary<NetworkObject, bool>
-                DeferredDespawns = new Dictionary<NetworkObject, bool>();
-            
-            [HarmonyPrefix]
-            [HarmonyPatch(typeof(RoundManager), nameof(RoundManager.DespawnPropsAtEndOfRound))]
-            public static void TranslateRemovedObjects(RoundManager __instance, bool despawnAllItems)
-            {
-                if (!__instance.IsServer)
-                    return;
-
-                GrabbableObject[] objectsOfType = Object.FindObjectsOfType<GrabbableObject>();
-                foreach (var grabbable in objectsOfType)
-                {
-                    if (!despawnAllItems && (grabbable.isHeld || grabbable.isInShipRoom) &&
-                        !grabbable.deactivated && (!StartOfRound.Instance.allPlayersDead ||
-                                                   !grabbable.itemProperties.isScrap))
-                        continue;
-
-                    var component = grabbable.gameObject.GetComponent<NetworkObject>();
-                    if (component != null && component.IsSpawned) component.transform.position -= DespawnDelta;
-                }
-            }
-
-            [HarmonyPrefix]
-            [HarmonyPatch(typeof(DepositItemsDesk), nameof(DepositItemsDesk.CheckAllPlayersSoldItemsServerRpc))]
-            public static void TranslateSoldObjects(DepositItemsDesk __instance)
-            {
-                var networkManager = __instance.NetworkManager;
-                if (networkManager == null || !networkManager.IsListening)
-                    return;
-
-                if (__instance.__rpc_exec_stage != NetworkBehaviour.__RpcExecStage.Server ||
-                    (!networkManager.IsServer && !networkManager.IsHost))
-                    return;
-
-                foreach (var networkObject in __instance.itemsOnCounterNetworkObjects)
-                    if (networkObject.IsSpawned)
-                        networkObject.transform.position -= DespawnDelta;
-            }
-
-            [HarmonyPrefix]
-            [HarmonyPatch(typeof(NetworkObject), nameof(NetworkObject.Despawn))]
-            public static bool DeferDespawn(NetworkObject __instance, bool destroy)
-            {
-                if (DeferredDespawns.ContainsKey(__instance))
-                {
-                    DeferredDespawns.Remove(__instance);
-                }
-                else if (__instance.GetComponentInParent<GrabbableObject>() != null)
-                {
-                    DeferredDespawns[__instance] = destroy;
-                    return false;
-                }
-                
-                return true;
-            }
-
-            [HarmonyPostfix]
-            [HarmonyPatch(typeof(NetworkObject), nameof(NetworkObject.Update))]
-            public static void HandleDeferredDespawn(NetworkObject __instance)
-            {
-                if (DeferredDespawns.TryGetValue(__instance, out var destroy)) 
-                    __instance.Despawn(destroy);
             }
         }
     }
