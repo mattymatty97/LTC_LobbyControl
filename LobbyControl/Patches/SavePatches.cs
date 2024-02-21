@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using Unity.Netcode;
+using UnityEngine;
 
 namespace LobbyControl.Patches
 {
@@ -17,6 +18,7 @@ namespace LobbyControl.Patches
         {
             if (LobbyControl.CanSave)
                 ES3.Save("LC_SavingMethod", LobbyControl.AutoSaveEnabled, __instance.currentSaveFileName);
+            
             return LobbyControl.CanSave;
         }
 
@@ -27,9 +29,34 @@ namespace LobbyControl.Patches
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.Start))]
         private static void ReadCustomLobbyStatus(StartOfRound __instance)
         {
-            if (__instance.IsServer)
-                LobbyControl.AutoSaveEnabled = LobbyControl.CanSave = ES3.Load("LC_SavingMethod",
-                    GameNetworkManager.Instance.currentSaveFileName, true);
+            if (!__instance.IsServer) 
+                return;
+            
+            LobbyControl.AutoSaveEnabled = LobbyControl.CanSave = ES3.Load("LC_SavingMethod",
+                GameNetworkManager.Instance.currentSaveFileName, true);
+        }
+        
+        /// <summary>
+        ///     Update Item position on Clients after HotLoad
+        /// </summary>
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.LoadShipGrabbableItems))]
+        private static void MarkScrapAsDirty(StartOfRound __instance)
+        {
+            if (!__instance.IsServer) 
+                return;
+            
+            GameObject ship = GameObject.Find("/Environment/HangarShip");
+            foreach (var item in ship.GetComponentsInChildren<GrabbableObject>())
+            {
+                item.GetComponent<NetworkObject>().MarkVariablesDirty(true);
+            }
+            
+            GameObject closet = GameObject.Find("/Environment/HangarShip/StorageCloset");
+            foreach (var item in closet.GetComponentsInChildren<GrabbableObject>())
+            {
+                item.GetComponent<NetworkObject>().MarkVariablesDirty(true);
+            }
         }
     }
 }

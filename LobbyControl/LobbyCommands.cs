@@ -17,15 +17,22 @@ namespace LobbyControl
     {
         private const string DefaultText = @"
 - status        : prints the current lobby status
+
+Steam:
 - open          : open the lobby
 - close         : close the lobby
 - private       : set lobby to Invite Only
 - friend        : set lobby to Friends Only
 - public        : set lobby to Public
 - rename [name] : change the name of the lobby
+
+Saving:
 - autosave      : toggle the autosave state
 - save (name)   : forcefully save the lobby
 - load (name)   : reload the lobby
+
+Extra:
+- namefix       : refresh player names for the entire lobby
 ";
 
         private static QuickMenuManager _quickMenuManager;
@@ -386,7 +393,6 @@ namespace LobbyControl
                             startOfRound.SyncSuitsServerRpc();
                             LobbyControl.AutoSaveEnabled = LobbyControl.CanSave = ES3.Load("LC_SavingMethod",
                                 GameNetworkManager.Instance.currentSaveFileName, true);
-
                             LobbyControl.Log.LogInfo(outText);
                         }
                         else
@@ -394,6 +400,25 @@ namespace LobbyControl
                             outText = "Lobby \'" + manager.currentSaveFileName + "\' does not Exist";
                             LobbyControl.Log.LogError(outText);
                             manager.currentSaveFileName = oldSaveFileName;
+                        }
+
+                        node.displayText = outText;
+                        node.maxCharactersToType = node.displayText.Length + 2;
+                        break;
+                    }
+                    case "namefix":
+                    {
+                       
+                        LobbyControl.Log.LogDebug("Fixing names");
+
+                        var outText = "Player names Reloaded";
+
+                        foreach (var playerScript in StartOfRound.Instance.allPlayerScripts)
+                        {
+                            if (!playerScript.IsOwnedByServer)
+                            {
+                                playerScript.SendNewPlayerValuesServerRpc(playerScript.playerSteamId);
+                            }
                         }
 
                         node.displayText = outText;

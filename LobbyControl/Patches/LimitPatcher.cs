@@ -39,6 +39,7 @@ namespace LobbyControl.Patches
         }
 
         [HarmonyPrefix]
+        [HarmonyPriority(0)]
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.SaveItemsInShip))]
         private static void SaveItemsInShipPatch(GameNetworkManager __instance)
         {
