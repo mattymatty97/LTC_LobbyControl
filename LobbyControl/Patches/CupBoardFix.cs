@@ -16,20 +16,28 @@ namespace LobbyControl.Patches
         [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.Start))]
         private static void ShipLoad1(GrabbableObject __instance, ref object[] __state)
         {
-            var pos = __instance.transform.position += new Vector3(0, Shift, 0);
-            __state = new object[]{__instance.itemProperties.itemSpawnsOnGround};
-            GameObject closet = GameObject.Find("/Environment/HangarShip/StorageCloset");
-            MeshCollider collider = closet.GetComponent<MeshCollider>();
-            if (collider.bounds.Contains(pos))
+            try
             {
-                __instance.transform.SetParent(closet.transform);
-                __instance.itemProperties.itemSpawnsOnGround = false;
-            }
-            else
-            {
-                var closest = collider.bounds.ClosestPoint(pos);
-                if (Math.Abs(closest.x - pos.x) < Tolerance && Math.Abs(closest.z - pos.z) < Tolerance && ( closest.y - Tolerance) <= pos.y)
+                var pos = __instance.transform.position += new Vector3(0, Shift, 0);
+                __state = new object[] { __instance.itemProperties.itemSpawnsOnGround };
+                GameObject closet = GameObject.Find("/Environment/HangarShip/StorageCloset");
+                MeshCollider collider = closet.GetComponent<MeshCollider>();
+                if (collider.bounds.Contains(pos))
+                {
+                    __instance.transform.SetParent(closet.transform);
                     __instance.itemProperties.itemSpawnsOnGround = false;
+                }
+                else
+                {
+                    var closest = collider.bounds.ClosestPoint(pos);
+                    if (Math.Abs(closest.x - pos.x) < Tolerance && Math.Abs(closest.z - pos.z) < Tolerance &&
+                        (closest.y - Tolerance) <= pos.y)
+                        __instance.itemProperties.itemSpawnsOnGround = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                LobbyControl.Log.LogError(ex);
             }
         }
         
@@ -47,12 +55,14 @@ namespace LobbyControl.Patches
             GameObject closet = GameObject.Find("/Environment/HangarShip/StorageCloset");
             if (closet == null) 
                 return;
-            for (Transform lightTransform = closet.transform.Find("StorageClosetLight");
-                 lightTransform != null;
-                 lightTransform = closet.transform.Find("StorageClosetLight"))
+            
+            for (Light light = closet.GetComponentInChildren<Light>();
+                 light != null;
+                 light = closet.GetComponentInChildren<Light>())
             {
-                Object.Destroy(lightTransform.gameObject);
+                Object.Destroy(light.gameObject);
             }
+            
         }
     }
 }

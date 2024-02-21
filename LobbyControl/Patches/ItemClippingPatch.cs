@@ -281,12 +281,13 @@ namespace LobbyControl.Patches
                 GrabbableObject[] objects = Object.FindObjectsOfType<GrabbableObject>();
 
                 foreach (var itemObject in objects)
-                    itemObject.transform.rotation = Quaternion.Euler(
-                        itemObject.itemProperties.restingRotation.x,
-                        itemObject.floorYRot == -1
-                            ? itemObject.transform.eulerAngles.y
-                            : itemObject.floorYRot + itemObject.itemProperties.floorYOffset + 90f,
-                        itemObject.itemProperties.restingRotation.z);
+                    if (itemObject.transform.name != "ClipboardManual" && itemObject.transform.name != "StickyNoteItem")
+                        itemObject.transform.rotation = Quaternion.Euler(
+                            itemObject.itemProperties.restingRotation.x,
+                            itemObject.floorYRot == -1
+                                ? itemObject.transform.eulerAngles.y
+                                : itemObject.floorYRot + itemObject.itemProperties.floorYOffset + 90f,
+                            itemObject.itemProperties.restingRotation.z);
             }
         }
     }
