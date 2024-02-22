@@ -11,32 +11,16 @@ namespace LobbyControl.Patches
 
         
         [HarmonyPatch]
-        internal class NewItemPatch
+        internal class NewShipItemPatch
         {
-            
-            private static bool _loadingLobby;
 
             private static readonly HashSet<GrabbableObject> ObjectsToUpdate = new HashSet<GrabbableObject>();
             
             [HarmonyPrefix]
-            [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.LoadShipGrabbableItems))]
-            public static void TrackSpawn(StartOfRound __instance)
-            {
-                _loadingLobby = true;
-            }            
-            
-            [HarmonyPostfix]
-            [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.LoadShipGrabbableItems))]
-            public static void TrackSpawn2(StartOfRound __instance)
-            {
-                _loadingLobby = false;
-            }
-            
-            [HarmonyPrefix]
-            [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.SetScrapValue))]
+            [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.Start))]
             public static void TrackNew(GrabbableObject __instance)
             {
-                if (!_loadingLobby)
+                if (!__instance.transform.IsChildOf(StartOfRound.Instance.elevatorTransform))
                     return;
 
                 ObjectsToUpdate.Add(__instance);
@@ -46,7 +30,7 @@ namespace LobbyControl.Patches
             [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.Update))]
             public static void UpdatePatch(GrabbableObject __instance)
             {
-                if (!__instance.IsServer || !ObjectsToUpdate.Remove(__instance))
+                if (!ObjectsToUpdate.Remove(__instance))
                     return;
                 
                 if (__instance.radarIcon != null && __instance.radarIcon.gameObject != null)

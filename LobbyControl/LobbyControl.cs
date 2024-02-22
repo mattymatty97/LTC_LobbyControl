@@ -4,6 +4,7 @@ using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
 using LethalAPI.TerminalCommands.Models;
+using LobbyControl.Patches;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UIElements.Collections;
@@ -15,7 +16,7 @@ namespace LobbyControl
     {
         public const string GUID = "com.github.mattymatty.LobbyControl";
         public const string NAME = "LobbyControl";
-        public const string VERSION = "2.2.0";
+        public const string VERSION = "2.2.1";
 
         internal static ManualLogSource Log;
 
@@ -90,6 +91,8 @@ namespace LobbyControl
                           StartOfRound.Instance.isChallengeFile)) &&
                         !StartOfRound.Instance.unlockablesList.unlockables[index].IsPlaceable)
                         SpawnShipUnlockable(index);
+                
+                ObjectSyncPatch.UnlockablesDirty = true;
             }
             catch (Exception ex)
             {
@@ -184,7 +187,7 @@ namespace LobbyControl
                     break;
             }
 
-            if (!(gameObject != null))
+            if (gameObject == null)
                 return;
 
             StartOfRound.Instance.SpawnedShipUnlockables[unlockableIndex] = gameObject;

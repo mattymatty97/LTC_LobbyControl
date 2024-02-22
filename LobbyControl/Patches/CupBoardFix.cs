@@ -1,6 +1,7 @@
 ﻿using System;
 using HarmonyLib;
 using Unity.Netcode;
+using Unity.Netcode.Components;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -19,12 +20,14 @@ namespace LobbyControl.Patches
             try
             {
                 var pos = __instance.transform.position += new Vector3(0, Shift, 0);
+                var networkObj = __instance.GetComponent<NetworkObject>();
                 __state = new object[] { __instance.itemProperties.itemSpawnsOnGround };
                 GameObject closet = GameObject.Find("/Environment/HangarShip/StorageCloset");
                 MeshCollider collider = closet.GetComponent<MeshCollider>();
                 if (collider.bounds.Contains(pos))
                 {
-                    __instance.transform.SetParent(closet.transform);
+                    if (networkObj.TrySetParent(closet))
+                        LobbyControl.Log.LogError($"Failed to set Parent for {__instance.name}");
                     __instance.itemProperties.itemSpawnsOnGround = false;
                 }
                 else
@@ -55,12 +58,30 @@ namespace LobbyControl.Patches
             GameObject closet = GameObject.Find("/Environment/HangarShip/StorageCloset");
             if (closet == null) 
                 return;
-            
-            for (Light light = closet.GetComponentInChildren<Light>();
-                 light != null;
-                 light = closet.GetComponentInChildren<Light>())
+
+            foreach (Light light in closet.GetComponentsInChildren<Light>())
             {
-                Object.Destroy(light.gameObject);
+                if (light.gameObject.transform.name == "StorageClosetLight")
+                    Object.Destroy(light.gameObject);
+            }
+            
+        }
+        
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnPlayerConnectedClientRpc))]
+        private static void CozyImprovementsFix2(StartOfRound __instance, ulong clientId)
+        {
+            if (clientId != NetworkManager.Singleton.LocalClientId)
+                return;
+            
+            GameObject closet = GameObject.Find("/Environment/HangarShip/StorageCloset");
+            if (closet == null) 
+                return;
+
+            foreach (Light light in closet.GetComponentsInChildren<Light>())
+            {
+                if (light.gameObject.transform.name == "StorageClosetLight")
+                    Object.Destroy(light.gameObject);
             }
             
         }
