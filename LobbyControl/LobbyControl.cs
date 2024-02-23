@@ -91,8 +91,6 @@ namespace LobbyControl
                           StartOfRound.Instance.isChallengeFile)) &&
                         !StartOfRound.Instance.unlockablesList.unlockables[index].IsPlaceable)
                         SpawnShipUnlockable(index);
-                
-                ObjectSyncPatch.UnlockablesDirty = true;
             }
             catch (Exception ex)
             {
