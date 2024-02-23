@@ -1,7 +1,6 @@
 ﻿using System;
 using HarmonyLib;
 using Unity.Netcode;
-using Unity.Netcode.Components;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -15,26 +14,24 @@ namespace LobbyControl.Patches
         
         [HarmonyPrefix]
         [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.Start))]
-        private static void ShipLoad1(GrabbableObject __instance, ref object[] __state)
+        private static void ObjectLoad(GrabbableObject __instance, ref object[] __state)
         {
             try
             {
                 var pos = __instance.transform.position += new Vector3(0, Shift, 0);
-                var networkObj = __instance.GetComponent<NetworkObject>();
                 __state = new object[] { __instance.itemProperties.itemSpawnsOnGround };
                 GameObject closet = GameObject.Find("/Environment/HangarShip/StorageCloset");
                 MeshCollider collider = closet.GetComponent<MeshCollider>();
                 if (collider.bounds.Contains(pos))
                 {
-                    if (networkObj.TrySetParent(closet))
-                        LobbyControl.Log.LogError($"Failed to set Parent for {__instance.name}");
+                    __instance.transform.parent = closet.transform;
                     __instance.itemProperties.itemSpawnsOnGround = false;
                 }
                 else
                 {
                     var closest = collider.bounds.ClosestPoint(pos);
                     if (Math.Abs(closest.x - pos.x) < Tolerance && Math.Abs(closest.z - pos.z) < Tolerance &&
-                        (closest.y - Tolerance) <= pos.y)
+                        closest.y - Tolerance <= pos.y)
                         __instance.itemProperties.itemSpawnsOnGround = false;
                 }
             }
@@ -46,7 +43,7 @@ namespace LobbyControl.Patches
         
         [HarmonyPostfix]
         [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.Start))]
-        private static void ShipLoad1(GrabbableObject __instance, object[] __state)
+        private static void ObjectLoad2(GrabbableObject __instance, object[] __state)
         {
             __instance.itemProperties.itemSpawnsOnGround = (bool)__state[0];
         }
