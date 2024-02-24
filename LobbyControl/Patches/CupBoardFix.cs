@@ -9,8 +9,8 @@ namespace LobbyControl.Patches
     [HarmonyPatch]
     internal class CupBoardFix
     {
-        private const float Tolerance = 0.3f;
-        private const float Shift = 0.02f;
+        private const float Tolerance = 0.05f;
+        private const float Shift = 0.1f;
         
         [HarmonyPrefix]
         [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.Start))]
@@ -18,21 +18,27 @@ namespace LobbyControl.Patches
         {
             try
             {
-                var pos = __instance.transform.position += new Vector3(0, Shift, 0);
+                var pos = __instance.transform.position;
                 __state = new object[] { __instance.itemProperties.itemSpawnsOnGround };
                 GameObject closet = GameObject.Find("/Environment/HangarShip/StorageCloset");
                 MeshCollider collider = closet.GetComponent<MeshCollider>();
                 if (collider.bounds.Contains(pos))
                 {
-                    __instance.transform.parent = closet.transform;
+                    var transform = __instance.transform;
+                    transform.parent = closet.transform;
+                    transform.localPosition += new Vector3(0, Shift, 0);
                     __instance.itemProperties.itemSpawnsOnGround = false;
                 }
                 else
                 {
                     var closest = collider.bounds.ClosestPoint(pos);
-                    if (Math.Abs(closest.x - pos.x) < Tolerance && Math.Abs(closest.z - pos.z) < Tolerance &&
-                        closest.y - Tolerance <= pos.y)
+                    var yDelta = pos.y - closest.y;
+                    if (Math.Abs(closest.x - pos.x) < Tolerance && Math.Abs(closest.z - pos.z) < Tolerance && yDelta >= -Tolerance)
+                    {
                         __instance.itemProperties.itemSpawnsOnGround = false;
+                        if (yDelta <= 0)
+                            __instance.transform.position += new Vector3(0, yDelta, 0);;
+                    }
                 }
             }
             catch (Exception ex)
@@ -43,8 +49,11 @@ namespace LobbyControl.Patches
         
         [HarmonyPostfix]
         [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.Start))]
-        private static void ObjectLoad2(GrabbableObject __instance, object[] __state)
+        private static void ObjectLoad2(GrabbableObject __instance, object[] __state, bool __runOriginal)
         {
+            if (!__runOriginal)
+                return;
+            
             __instance.itemProperties.itemSpawnsOnGround = (bool)__state[0];
         }
         

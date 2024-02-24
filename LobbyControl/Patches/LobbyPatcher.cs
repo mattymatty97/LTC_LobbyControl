@@ -13,29 +13,37 @@ namespace LobbyControl.Patches
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(Lobby), nameof(Lobby.SetJoinable))]
-        private static void TrackOpenStatus(Lobby __instance, object[] __args)
+        private static void TrackOpenStatus(Lobby __instance, object[] __args, bool __runOriginal)
         {
+            if (!__runOriginal)
+                return;
             Open[__instance] = (bool)__args[0];
         }
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(Lobby), nameof(Lobby.SetPublic))]
-        private static void TrackPublicStatus(Lobby __instance)
+        private static void TrackPublicStatus(Lobby __instance, bool __runOriginal)
         {
+            if (!__runOriginal)
+                return;
             Visibility[__instance] = LobbyType.Public;
         }
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(Lobby), nameof(Lobby.SetPrivate))]
-        private static void TrackPrivateStatus(Lobby __instance)
+        private static void TrackPrivateStatus(Lobby __instance, bool __runOriginal)
         {
+            if (!__runOriginal)
+                return;
             Visibility[__instance] = LobbyType.Private;
         }
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(Lobby), nameof(Lobby.SetFriendsOnly))]
-        private static void trackFriendsOnly(Lobby __instance)
+        private static void trackFriendsOnly(Lobby __instance, bool __runOriginal)
         {
+            if (!__runOriginal)
+                return;
             Visibility[__instance] = LobbyType.FriendsOnly;
         }
 

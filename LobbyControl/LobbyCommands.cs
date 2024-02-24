@@ -33,6 +33,7 @@ Saving:
 
 Extra:
 - namefix       : refresh player names for the entire lobby
+- dropall       : force all players to drop their inventory
 ";
 
         private static QuickMenuManager _quickMenuManager;
@@ -93,8 +94,8 @@ Extra:
                     }
                     case "open":
                     {
-                        if (PerformOrbitCheck(node, out var lobby1)) 
-                            return lobby1;
+                        if (PerformOrbitCheck(node, out var errorText)) 
+                            return errorText;
                         
                         if (!LobbyControl.CanModifyLobby)
                         {
@@ -122,8 +123,8 @@ Extra:
                     }
                     case "close":
                     {
-                        if (PerformOrbitCheck(node, out var lobby1)) 
-                            return lobby1;
+                        if (PerformOrbitCheck(node, out var errorText)) 
+                            return errorText;
                         
                         if (!LobbyControl.CanModifyLobby)
                         {
@@ -151,8 +152,8 @@ Extra:
                     }
                     case "private":
                     {
-                        if (PerformOrbitCheck(node, out var lobby1)) 
-                            return lobby1;
+                        if (PerformOrbitCheck(node, out var errorText)) 
+                            return errorText;
                         
                         if (!LobbyControl.CanModifyLobby)
                         {
@@ -178,8 +179,8 @@ Extra:
                     }
                     case "friend":
                     {
-                        if (PerformOrbitCheck(node, out var lobby1)) 
-                            return lobby1;
+                        if (PerformOrbitCheck(node, out var errorText)) 
+                            return errorText;
                         
                         if (!LobbyControl.CanModifyLobby)
                         {
@@ -206,8 +207,8 @@ Extra:
                     }
                     case "public":
                     {
-                        if (PerformOrbitCheck(node, out var lobby1)) 
-                            return lobby1;
+                        if (PerformOrbitCheck(node, out var errorText)) 
+                            return errorText;
                         
                         if (!LobbyControl.CanModifyLobby)
                         {
@@ -233,8 +234,8 @@ Extra:
                     }
                     case "rename":
                     {
-                        if (PerformOrbitCheck(node, out var lobby1)) 
-                            return lobby1;
+                        if (PerformOrbitCheck(node, out var errorText)) 
+                            return errorText;
                         
                         if (remaining.IsNullOrWhiteSpace())
                         {
@@ -292,8 +293,8 @@ Extra:
                     }
                     case "save":
                     {
-                        if (PerformOrbitCheck(node, out var lobby1)) 
-                            return lobby1;
+                        if (PerformOrbitCheck(node, out var errorText)) 
+                            return errorText;
                         
                         if (!LobbyControl.CanModifyLobby)
                         {
@@ -341,8 +342,8 @@ Extra:
                     }
                     case "load":
                     {
-                        if (PerformOrbitCheck(node, out var lobby1)) 
-                            return lobby1;
+                        if (PerformOrbitCheck(node, out var errorText)) 
+                            return errorText;
                         
                         if (!LobbyControl.CanModifyLobby)
                         {
@@ -425,6 +426,25 @@ Extra:
                         node.maxCharactersToType = node.displayText.Length + 2;
                         break;
                     }
+                    case "dropall":
+                    {
+                        
+                        if (PerformOrbitCheck(node, out var errorText)) 
+                            return errorText;
+                        
+                        LobbyControl.Log.LogDebug("Dropping all Items");
+
+                        var outText = "All Items Dropped";
+
+                        foreach (var playerScript in StartOfRound.Instance.allPlayerScripts)
+                        {
+                            playerScript.DropAllHeldItemsAndSync();
+                        }
+
+                        node.displayText = outText;
+                        node.maxCharactersToType = node.displayText.Length + 2;
+                        break;
+                    }
                     case "help":
                     {
                         node.displayText = DefaultText;
@@ -445,13 +465,13 @@ Extra:
 
             return node;
 
-            bool PerformOrbitCheck(TerminalNode terminalNode, out TerminalNode lobby1)
+            bool PerformOrbitCheck(TerminalNode terminalNode, out TerminalNode errorText)
             {
                 if (!StartOfRound.Instance.inShipPhase)
                 {
                     terminalNode.displayText = "Can only be used while in Orbit";
                     {
-                        lobby1 = terminalNode;
+                        errorText = terminalNode;
                         return true;
                     }
                 }
@@ -460,12 +480,12 @@ Extra:
                 {
                     terminalNode.displayText = "Lobby does not exist";
                     {
-                        lobby1 = terminalNode;
+                        errorText = terminalNode;
                         return true;
                     }
                 }
 
-                lobby1 = null;
+                errorText = null;
                 return false;
             }
         }

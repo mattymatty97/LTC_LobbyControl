@@ -250,8 +250,11 @@ namespace LobbyControl.Patches
 
             [HarmonyPostfix]
             [HarmonyPatch(nameof(StartOfRound.Awake))]
-            public static void AwakePatch(StartOfRound __instance)
+            public static void AwakePatch(StartOfRound __instance, bool __runOriginal)
             {
+                if (!__runOriginal)
+                    return;
+                
                 foreach (var items in __instance.allItemsList.itemsList)
                 {
                     if (!ItemFixes.TryGetValue($"{items.itemName}[{items.itemId}]", out List<float> value))
@@ -264,16 +267,19 @@ namespace LobbyControl.Patches
 
             [HarmonyPostfix]
             [HarmonyPatch(nameof(StartOfRound.LoadShipGrabbableItems))]
-            public static void GrabbablePatch(StartOfRound __instance)
+            public static void GrabbablePatch(StartOfRound __instance, bool __runOriginal)
             {
+                if (!__runOriginal)
+                    return;
+                
                 _updateNextTick = true;
             }
 
             [HarmonyPostfix]
             [HarmonyPatch(nameof(StartOfRound.Update))]
-            public static void UpdatePatch(StartOfRound __instance)
+            public static void UpdatePatch(StartOfRound __instance, bool __runOriginal)
             {
-                if (!__instance.IsServer || !_updateNextTick)
+                if (!__runOriginal || !__instance.IsServer || !_updateNextTick)
                     return;
 
                 _updateNextTick = false;

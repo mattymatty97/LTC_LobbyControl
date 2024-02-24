@@ -28,9 +28,9 @@ namespace LobbyControl.Patches
             
             [HarmonyPostfix]
             [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.Update))]
-            public static void UpdatePatch(GrabbableObject __instance)
+            public static void UpdatePatch(GrabbableObject __instance, bool __runOriginal)
             {
-                if (!ObjectsToUpdate.Remove(__instance))
+                if (!__runOriginal || !ObjectsToUpdate.Remove(__instance))
                     return;
                 
                 if (__instance.radarIcon != null && __instance.radarIcon.gameObject != null)

@@ -11,30 +11,16 @@ namespace LobbyControl.Patches
     {
         private static QuickMenuManager _quickMenuManager;
 
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.Singleton_OnClientConnectedCallback))]
-        private static void LogConnect()
-        {
-            LobbyControl.Log.LogDebug("Player connected.");
-        }
-
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.Singleton_OnClientDisconnectCallback))]
-        private static void LogDisconnect()
-        {
-            LobbyControl.Log.LogDebug("Player disconnected.");
-        }
-
         /// <summary>
         ///     Ensure that any incoming connections are properly accepted.
         /// </summary>
         [HarmonyPostfix]
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.ConnectionApproval))]
         private static void FixConnectionApproval(GameNetworkManager __instance,
-            NetworkManager.ConnectionApprovalResponse response)
+            NetworkManager.ConnectionApprovalResponse response, bool __runOriginal)
         {
             // Only override refusals that are due to the current game state being set to "has already started".
-            if (response.Approved || response.Reason != "Game has already started!")
+            if (!__runOriginal || response.Approved || response.Reason != "Game has already started!")
                 return;
 
             if (__instance.gameHasStarted && StartOfRound.Instance.inShipPhase)
@@ -50,8 +36,11 @@ namespace LobbyControl.Patches
         /// </summary>
         [HarmonyPostfix]
         [HarmonyPatch(typeof(QuickMenuManager), nameof(QuickMenuManager.InviteFriendsButton))]
-        private static void FixFriendInviteButton()
+        private static void FixFriendInviteButton(bool __runOriginal)
         {
+            if (!__runOriginal)
+                return;
+            
             // Only do this if the game isn't doing it by itself already.
             if (GameNetworkManager.Instance.gameHasStarted && StartOfRound.Instance.inShipPhase)
                 GameNetworkManager.Instance.InviteFriendsUI();
@@ -94,8 +83,11 @@ namespace LobbyControl.Patches
         /// </summary>
         [HarmonyPostfix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.Start))]
-        private static void ResetStatus(StartOfRound __instance)
+        private static void ResetStatus(StartOfRound __instance, bool __runOriginal)
         {
+            if (!__runOriginal)
+                return;
+            
             LobbyControl.CanModifyLobby = true;
         }
 
@@ -104,8 +96,11 @@ namespace LobbyControl.Patches
         /// </summary>
         [HarmonyPostfix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.EndOfGame))]
-        private static IEnumerator ReopenSteamLobby(IEnumerator coroutine, StartOfRound __instance)
+        private static IEnumerator ReopenSteamLobby(IEnumerator coroutine, StartOfRound __instance, bool __runOriginal)
         {
+            if (!__runOriginal)
+                yield break;
+            
             // The method we're patching here is a coroutine. Fully exhaust it before adding our code.
             while (coroutine.MoveNext())
                 yield return coroutine.Current;
