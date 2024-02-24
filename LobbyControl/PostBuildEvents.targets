@@ -27,10 +27,6 @@
         <Reference Include="..\Dependencies\Unity.TextMeshPro.dll" Publicize="false"/>
     </ItemGroup>
     
-    <ItemGroup>
-        <PackageReference Include="LethalCompany.LobbyCompatibility" Version="1.*" PrivateAssets="all" />
-    </ItemGroup>
-    
     <!-- Ensure the user (you!) has actually set everything up properly. -->
     <Target Name="EnsureGameDirectoryDefined" BeforeTargets="PrepareForBuild">
         <PropertyGroup>

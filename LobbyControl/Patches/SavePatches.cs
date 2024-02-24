@@ -27,9 +27,9 @@ namespace LobbyControl.Patches
         /// </summary>
         [HarmonyPostfix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.Start))]
-        private static void ReadCustomLobbyStatus(StartOfRound __instance)
+        private static void ReadCustomLobbyStatus(StartOfRound __instance, bool __runOriginal)
         {
-            if (!__instance.IsServer) 
+            if (!__runOriginal || !__instance.IsServer) 
                 return;
             
             LobbyControl.AutoSaveEnabled = LobbyControl.CanSave = ES3.Load("LC_SavingMethod",
@@ -41,9 +41,9 @@ namespace LobbyControl.Patches
         /// </summary>
         [HarmonyPostfix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.LoadShipGrabbableItems))]
-        private static void MarkScrapAsDirty(StartOfRound __instance)
+        private static void MarkScrapAsDirty(StartOfRound __instance, bool __runOriginal)
         {
-            if (!__instance.IsServer) 
+            if (!__runOriginal || !__instance.IsServer) 
                 return;
             
             GameObject ship = GameObject.Find("/Environment/HangarShip");
