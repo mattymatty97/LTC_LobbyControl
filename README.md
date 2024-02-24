@@ -1,8 +1,8 @@
 LobbyControl
 ============
-![GitHub Release](https://img.shields.io/github/v/release/mattymatty97/LTC_LobbyControl?display_name=release&logo=github&logoColor=white&link=https%3A%2F%2Fgithub.com%2Fmattymatty97%2FLTC_LobbyControl%2Freleases%2Flatest)
-![GitHub Pre-Release](https://img.shields.io/github/v/release/mattymatty97/LTC_LobbyControl?include_prereleases&display_name=release&logo=github&logoColor=white&label=preview&link=https%3A%2F%2Fgithub.com%2Fmattymatty97%2FLTC_LobbyControl%2Freleases%2Flatest)  
-![Thunderstore Downloads](https://img.shields.io/thunderstore/dt/mattymatty/LobbyControl?style=flat&logo=thunderstore&logoColor=white&label=thunderstore&link=https%3A%2F%2Fthunderstore.io%2Fc%2Flethal-company%2Fp%2Fmattymatty%2FLobbyControl%2F)
+[![GitHub Release](https://img.shields.io/github/v/release/mattymatty97/LTC_LobbyControl?display_name=release&logo=github&logoColor=white)](https://github.com/mattymatty97/LTC_LobbyControl/releases/latest)
+[![GitHub Pre-Release](https://img.shields.io/github/v/release/mattymatty97/LTC_LobbyControl?include_prereleases&display_name=release&logo=github&logoColor=white&label=preview)](https://github.com/mattymatty97/LTC_LobbyControl/releases)  
+[![Thunderstore Downloads](https://img.shields.io/thunderstore/dt/mattymatty/LobbyControl?style=flat&logo=thunderstore&logoColor=white&label=thunderstore)](https://thunderstore.io/c/lethal-company/p/mattymatty/LobbyControl/)
 
 
 A collection of Patches for Lethal Company with Quality of life changes for the Host.
