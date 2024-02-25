@@ -1,6 +1,6 @@
 {
   "name": "LobbyControl",
-  "version_number": "2.2.1",
+  "version_number": "2.2.2",
   "website_url": "https://github.com/mattymatty97/LTC_LobbyControl",
   "description": "Allow fine control of the steam lobby whenever you're in orbit in between missions.",
   "dependencies": [
