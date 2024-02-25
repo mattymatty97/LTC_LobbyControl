@@ -1,3 +1,12 @@
+## v2.2.2
+- To Be Listed
+
+## v2.2.1
+- Fully working lobby HotLoad
+- Added Fixes for CupBoard ( storage closet ) items
+- Improvements to invisible Player fix
+- Removed item save limit, and scrap sync limits
+
 ## v2.2.0
 - Added Experimental HotLoad of the lobby
 - Added Fixes for various Radar Bugs
@@ -10,6 +19,8 @@
 
 ## v2.0.0
 - Fork Point and first rewrite with terminal commands
+
+## OLD ShipLobby Changelog:
 
 ## v1.0.2
 
