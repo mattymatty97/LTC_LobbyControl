@@ -11,6 +11,9 @@ namespace LobbyControl.Patches
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.SyncShipUnlockablesServerRpc))]
         private static IEnumerable<CodeInstruction> SyncUnlockablesPatch(IEnumerable<CodeInstruction> instructions)
         {
+            if (!LobbyControl.PluginConfig.SaveLimit.Enabled.Value)
+                return instructions;
+            
             List<CodeInstruction> codes = new List<CodeInstruction>(instructions);
             var found = false;
             try
@@ -42,48 +45,12 @@ namespace LobbyControl.Patches
         [HarmonyPriority(0)]
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.SaveItemsInShip))]
         private static void SaveItemsInShipPatch(GameNetworkManager __instance)
-        {
+        { 
+            if (!LobbyControl.PluginConfig.SaveLimit.Enabled.Value)
+                return;
+            
             StartOfRound.Instance.maxShipItemCapacity = int.MaxValue;
         }
 
-        /*
-        [HarmonyTranspiler]
-        [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.SaveItemsInShip))]
-        private static IEnumerable<CodeInstruction> SaveItemsInShipPatch(IEnumerable<CodeInstruction> instructions)
-        {
-            var codes = instructions.ToList();
-
-            bool found = false;
-            try
-            {
-                for (var i = 0; i < codes.Count; i++)
-                {
-                    CodeInstruction curr = codes[i];
-                    if (curr.LoadsField(typeof(StartOfRound).GetField(nameof(StartOfRound.maxShipItemCapacity))))
-                    {
-                        codes[i - 2].opcode = OpCodes.Nop;
-                        codes[i - 1].opcode = OpCodes.Nop;
-                        codes[i]    .opcode = OpCodes.Nop;
-                        codes[i + 1].opcode = OpCodes.Nop;
-                        found = true;
-                    }
-                }
-
-                if (!found)
-                {
-                    LobbyControl.Log.LogError(nameof(SaveItemsInShipPatch) + "failed to Patch");
-                }
-                else
-                {
-
-                    LobbyControl.Log.LogWarning(nameof(SaveItemsInShipPatch) + "successfully Patched");
-                }
-            }
-            catch (Exception ex)
-            {
-                LobbyControl.Log.LogError("Exception patching " + nameof(SaveItemsInShipPatch) + "\n" + ex);
-            }
-            return codes;
-        }*/
     }
 }

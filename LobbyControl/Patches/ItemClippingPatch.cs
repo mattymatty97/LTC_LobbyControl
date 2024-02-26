@@ -221,6 +221,9 @@ namespace LobbyControl.Patches
             public static bool itemPlacementPositionPatch(PlaceableObjectsSurface __instance, ref Vector3 __result,
                 Transform gameplayCamera, GrabbableObject heldObject)
             {
+                if (!LobbyControl.PluginConfig.ItemClipping.Enabled.Value)
+                    return true;
+                
                 var val = default(RaycastHit);
                 if (Physics.Raycast(gameplayCamera.position, gameplayCamera.forward, out val, 7f,
                         StartOfRound.Instance.collidersAndRoomMask, (QueryTriggerInteraction)1))
@@ -252,6 +255,9 @@ namespace LobbyControl.Patches
             [HarmonyPatch(nameof(StartOfRound.Awake))]
             public static void AwakePatch(StartOfRound __instance, bool __runOriginal)
             {
+                if (!LobbyControl.PluginConfig.ItemClipping.Enabled.Value)
+                    return;
+                
                 if (!__runOriginal)
                     return;
                 
@@ -269,6 +275,9 @@ namespace LobbyControl.Patches
             [HarmonyPatch(nameof(StartOfRound.LoadShipGrabbableItems))]
             public static void GrabbablePatch(StartOfRound __instance, bool __runOriginal)
             {
+                if (!LobbyControl.PluginConfig.ItemClipping.Enabled.Value)
+                    return;
+                
                 if (!__runOriginal)
                     return;
                 
@@ -279,6 +288,9 @@ namespace LobbyControl.Patches
             [HarmonyPatch(nameof(StartOfRound.Update))]
             public static void UpdatePatch(StartOfRound __instance, bool __runOriginal)
             {
+                if (!LobbyControl.PluginConfig.ItemClipping.Enabled.Value)
+                    return;
+                
                 if (!__runOriginal || !__instance.IsServer || !_updateNextTick)
                     return;
 

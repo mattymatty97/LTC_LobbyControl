@@ -1,5 +1,5 @@
 ## v2.2.2
-- To Be Listed
+- Added Config File
 
 ## v2.2.1
 - Fully working lobby HotLoad

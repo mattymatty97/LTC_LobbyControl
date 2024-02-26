@@ -20,6 +20,9 @@ namespace LobbyControl.Patches
             [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.Start))]
             public static void TrackNew(GrabbableObject __instance)
             {
+                if (!LobbyControl.PluginConfig.Radar.Enabled.Value || !LobbyControl.PluginConfig.Radar.RemoveOnShip.Value)
+                    return;
+                
                 if (!__instance.transform.IsChildOf(StartOfRound.Instance.elevatorTransform))
                     return;
 
@@ -45,6 +48,9 @@ namespace LobbyControl.Patches
             [HarmonyPatch(typeof(NetworkBehaviour), nameof(NetworkBehaviour.OnDestroy))]
             public static void DestroyPatch(NetworkBehaviour __instance)
             {
+                if (!LobbyControl.PluginConfig.Radar.Enabled.Value || !LobbyControl.PluginConfig.Radar.RemoveDeleted.Value)
+                    return;
+                
                 var obj = __instance as GrabbableObject;
                 if (obj != null && obj.radarIcon != null && obj.radarIcon.gameObject != null)
                     Object.Destroy(obj.radarIcon.gameObject);

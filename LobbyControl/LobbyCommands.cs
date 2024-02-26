@@ -510,8 +510,8 @@ Extra:
             var quotaFulfilled = TimeOfDay.Instance.quotaFulfilled;
             var timeUntilDeadline = (int)TimeOfDay.Instance.timeUntilDeadline;
             var controller = StartOfRound.Instance.localPlayerController;
-            startOfRound.OnPlayerConnectedClientRpc(controller.playerClientId, startOfRound.connectedPlayersAmount - 1,
-                ulongList.ToArray(), startOfRound.ClientPlayerList[controller.playerClientId], groupCredits,
+            startOfRound.OnPlayerConnectedClientRpc(controller.actualClientId, startOfRound.connectedPlayersAmount - 1,
+                ulongList.ToArray(), startOfRound.ClientPlayerList[controller.actualClientId], groupCredits,
                 startOfRound.currentLevelID, profitQuota, timeUntilDeadline, quotaFulfilled,
                 startOfRound.randomMapSeed, startOfRound.isChallengeFile);
         }
