@@ -9,13 +9,15 @@ namespace LobbyControl.Patches
     [HarmonyPatch]
     internal class CupBoardFix
     {
-        private const float Tolerance = 0.05f;
-        private const float Shift = 0.1f;
         
         [HarmonyPrefix]
         [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.Start))]
         private static void ObjectLoad(GrabbableObject __instance, ref object[] __state)
         {
+            if (!LobbyControl.PluginConfig.CupBoard.Enabled.Value)
+                return;
+
+            var tolerance = LobbyControl.PluginConfig.CupBoard.Tolerance.Value;
             try
             {
                 var pos = __instance.transform.position;
@@ -26,14 +28,14 @@ namespace LobbyControl.Patches
                 {
                     var transform = __instance.transform;
                     transform.parent = closet.transform;
-                    transform.localPosition += new Vector3(0, Shift, 0);
+                    transform.localPosition += LobbyControl.PluginConfig.CupBoard.Shift.Value;
                     __instance.itemProperties.itemSpawnsOnGround = false;
                 }
                 else
                 {
                     var closest = collider.bounds.ClosestPoint(pos);
                     var yDelta = pos.y - closest.y;
-                    if (Math.Abs(closest.x - pos.x) < Tolerance && Math.Abs(closest.z - pos.z) < Tolerance && yDelta >= -Tolerance)
+                    if (Math.Abs(closest.x - pos.x) < tolerance && Math.Abs(closest.z - pos.z) < tolerance && yDelta >= -tolerance)
                     {
                         __instance.itemProperties.itemSpawnsOnGround = false;
                         if (yDelta <= 0)
@@ -51,6 +53,8 @@ namespace LobbyControl.Patches
         [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.Start))]
         private static void ObjectLoad2(GrabbableObject __instance, object[] __state, bool __runOriginal)
         {
+            if (!LobbyControl.PluginConfig.CupBoard.Enabled.Value)
+                return;
             if (!__runOriginal)
                 return;
             

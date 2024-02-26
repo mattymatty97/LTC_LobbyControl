@@ -17,6 +17,9 @@ namespace LobbyControl.Patches
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnClientDisconnect))]
         private static void TrackDc(StartOfRound __instance, ulong clientId)
         {
+            if (!LobbyControl.PluginConfig.InvisiblePlayer.Enabled.Value)
+                return;
+            
             if (__instance.IsServer && !__instance.inShipPhase && !ToRespawn.ContainsKey(clientId) && clientId != __instance.localPlayerController.playerClientId)
                 ToRespawn.Add(clientId, -1);
         }
@@ -26,6 +29,9 @@ namespace LobbyControl.Patches
         [HarmonyPriority(Priority.First)]
         private static bool OnPlayerDCPatch(StartOfRound __instance, int playerObjectNumber, ulong clientId)
         {
+            if (!LobbyControl.PluginConfig.InvisiblePlayer.Enabled.Value)
+                return true;
+            
             if (!__instance.IsServer || __instance.inShipPhase || !ToRespawn.ContainsKey(clientId))
                 return true;
 
@@ -47,6 +53,9 @@ namespace LobbyControl.Patches
         [HarmonyPriority(Priority.First)]
         private static bool OnClientDCPatch(StartOfRound __instance, int playerObjectNumber, ulong clientId)
         {
+            if (!LobbyControl.PluginConfig.InvisiblePlayer.Enabled.Value)
+                return true;
+            
             if (!__instance.IsServer || __instance.inShipPhase || !ToRespawn.ContainsKey(clientId))
                 return true;
 
@@ -64,9 +73,12 @@ namespace LobbyControl.Patches
         }
 
         [HarmonyPrefix]
-        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.ShipHasLeft))]
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.EndOfGameClientRpc))]
         private static void RespawnDcPlayer(StartOfRound __instance)
         {
+            if (!LobbyControl.PluginConfig.InvisiblePlayer.Enabled.Value)
+                return;
+            
             if (!__instance.IsServer || ToRespawn.Count <= 0)
                 return;
             
@@ -84,10 +96,10 @@ namespace LobbyControl.Patches
                     ulongList.Add(999UL);
             }
             
-            int groupCredits = UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits;
-            int profitQuota = TimeOfDay.Instance.profitQuota;
-            int quotaFulfilled = TimeOfDay.Instance.quotaFulfilled;
-            int timeUntilDeadline = (int) TimeOfDay.Instance.timeUntilDeadline;
+            var groupCredits = UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits;
+            var profitQuota = TimeOfDay.Instance.profitQuota;
+            var quotaFulfilled = TimeOfDay.Instance.quotaFulfilled;
+            var timeUntilDeadline = (int) TimeOfDay.Instance.timeUntilDeadline;
             foreach (var dcPlayer in new Dictionary<ulong,int>(ToRespawn))
             {
                 if (dcPlayer.Value == -1)
@@ -109,6 +121,9 @@ namespace LobbyControl.Patches
         [HarmonyPriority(Priority.VeryLow)]
         private static void ClearDcPlayer(StartOfRound __instance, bool __runOriginal)
         {
+            if (!LobbyControl.PluginConfig.InvisiblePlayer.Enabled.Value)
+                return;
+            
             if (!__runOriginal || !__instance.IsServer || ToDisconnect.Count <= 0) 
                 return;
             

@@ -80,7 +80,7 @@
     <Target Name="CreateZip" AfterTargets="PrepareZip" Condition="$(Configuration.Contains('Release'))">
         <Message Importance="high" Text="Zipping project for distribution."/>
         <PropertyGroup>
-            <ZipFile>$(OutputPath)$(AssemblyName)-$(AssemblyVersion).zip</ZipFile>
+            <ZipFile>$(ProjectDir)\Output\$(AssemblyName)-$(AssemblyVersion).zip</ZipFile>
         </PropertyGroup>
         <ZipDirectory DestinationFile="$(ZipFile)" SourceDirectory="$(TempZipDir)" Overwrite="true"/>
     </Target>
