@@ -4,8 +4,8 @@ using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
-using LethalAPI.TerminalCommands.Models;
-using LobbyControl.Patches;
+using LethalAPI.LibTerminal;
+using LethalAPI.LibTerminal.Models;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UIElements.Collections;
@@ -17,7 +17,7 @@ namespace LobbyControl
     {
         public const string GUID = "com.github.mattymatty.LobbyControl";
         public const string NAME = "LobbyControl";
-        public const string VERSION = "2.2.2";
+        public const string VERSION = "2.2.3";
 
         internal static ManualLogSource Log;
 
@@ -206,7 +206,7 @@ namespace LobbyControl
                     ,"prevent items inside or above the Storage Closet from falling to the ground");
                 CupBoard.Tolerance = Config.Bind("CupBoard","tolerance",0.05f
                     ,"how loosely \"close\" the items have to be to the top of the closet for them to count X/Z");
-                CupBoard.Shift = Config.Bind("CupBoard","shift",new Vector3(0, 0.10f, 0)
+                CupBoard.Shift = Config.Bind("CupBoard","shift",new Vector3(0, 0.1f, 0)
                     ,"how much move the items inside the closet on load");
                 //Radar
                 Radar.Enabled = Config.Bind("Radar","enabled",true
