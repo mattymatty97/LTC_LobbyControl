@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 using BepInEx;
-using LethalAPI.TerminalCommands.Attributes;
-using LethalAPI.TerminalCommands.Models;
+using LethalAPI.LibTerminal.Attributes;
+using LethalAPI.LibTerminal.Models.Enums;
 using LobbyControl.Patches;
 using Unity.Netcode;
 using UnityEngine;
