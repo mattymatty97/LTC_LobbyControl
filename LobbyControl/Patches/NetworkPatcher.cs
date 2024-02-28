@@ -28,6 +28,12 @@ namespace LobbyControl.Patches
                 LobbyControl.Log.LogDebug("Approving incoming late connection.");
                 response.Reason = "";
                 response.Approved = true;
+            }else if (!LobbyControl.CanModifyLobby)
+            {
+                response.Reason = "Ship has already landed!";
+            }else if (!__instance.currentLobby.HasValue || !LobbyPatcher.IsOpen(__instance.currentLobby.Value))
+            {
+                response.Reason = "Lobby has been closed!";
             }
         }
 
@@ -94,6 +100,7 @@ namespace LobbyControl.Patches
         /// </summary>
         [HarmonyPostfix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.EndOfGame))]
+        [HarmonyPriority(0)]
         private static IEnumerator ReopenSteamLobby(IEnumerator coroutine, StartOfRound __instance, bool __runOriginal)
         {
             if (!__runOriginal)
@@ -114,7 +121,7 @@ namespace LobbyControl.Patches
             yield return new WaitUntil(() => !__instance.firingPlayersCutsceneRunning);
 
 
-            LobbyControl.Log.LogDebug("Lobby can be re-openned");
+            LobbyControl.Log.LogDebug("Lobby can be re-opened");
 
             LobbyControl.CanModifyLobby = true;
 

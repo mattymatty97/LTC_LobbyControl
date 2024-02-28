@@ -10,12 +10,13 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UIElements.Collections;
 
+
 namespace LobbyControl
 {
     [BepInPlugin(GUID, NAME, VERSION)]
     internal class LobbyControl : BaseUnityPlugin
     {
-        public const string GUID = "com.github.mattymatty.LobbyControl";
+        public const string GUID = "com.github.mattymatty";
         public const string NAME = "LobbyControl";
         public const string VERSION = "2.2.4";
 
@@ -35,7 +36,7 @@ namespace LobbyControl
             {
                 Log.LogInfo("Initializing Configs");
 
-                PluginConfig.Init(Config);
+                PluginConfig.Init(this);
                 
                 var harmony = new Harmony(GUID);
                 harmony.PatchAll(Assembly.GetExecutingAssembly());
@@ -198,42 +199,44 @@ namespace LobbyControl
 
         internal static class PluginConfig
         {
-            internal static void Init(ConfigFile Config)
+            internal static void Init(BaseUnityPlugin plugin)
             {
+                var config = plugin.Config;
                 //Initialize Configs
                 //CupBoard
-                CupBoard.Enabled = Config.Bind("CupBoard","enabled",true
+                CupBoard.Enabled = config.Bind("CupBoard","enabled",true
                     ,"prevent items inside or above the Storage Closet from falling to the ground");
-                CupBoard.Tolerance = Config.Bind("CupBoard","tolerance",0.05f
+                CupBoard.Tolerance = config.Bind("CupBoard","tolerance",0.05f
                     ,"how loosely \"close\" the items have to be to the top of the closet for them to count X/Z");
-                CupBoard.Shift = Config.Bind("CupBoard","shift",new Vector3(0, 0.1f, 0)
+                CupBoard.Shift = config.Bind("CupBoard","shift",new Vector3(0, 0.1f, 0)
                     ,"how much move the items inside the closet on load");
                 //Radar
-                Radar.Enabled = Config.Bind("Radar","enabled",true
+                Radar.Enabled = config.Bind("Radar","enabled",true
                     ,"remove orphan radar icons from deleted/collected scrap");
-                Radar.RemoveDeleted = Config.Bind("Radar","deleted_scrap",true
+                Radar.RemoveDeleted = config.Bind("Radar","deleted_scrap",true
                     ,"remove orphan radar icons from deleted scrap ( company building )");
-                Radar.RemoveOnShip = Config.Bind("Radar","ship_loot",true
+                Radar.RemoveOnShip = config.Bind("Radar","ship_loot",true
                     ,"remove orphan radar icons from scrap on the ship in a recently created game");
                 //GhostItems
-                GhostItems.Enabled = Config.Bind("GhostItems","enabled",true
+                GhostItems.Enabled = config.Bind("GhostItems","enabled",true
                     ,"prevent the creation of non-grabbable items in case of inventory desync");
-                GhostItems.ForceDrop = Config.Bind("GhostItems","forced_drop",true
+                GhostItems.ForceDrop = config.Bind("GhostItems","forced_drop",true
                     ,"force the player generating the ghost item to drop all his inventory ( this will re-sync the inventory and solve the issue unless it is caused by a mod)");
                 //ItemClipping
-                ItemClipping.Enabled = Config.Bind("ItemClipping","enabled",true
+                ItemClipping.Enabled = config.Bind("ItemClipping","enabled",true
                     ,"fix rotation and height of various items when on the Ground");
-                ItemClipping.groundYOffset = Config.Bind("ItemClipping","ground_y_offset",0.07f
+                ItemClipping.groundYOffset = config.Bind("ItemClipping","ground_y_offset",0.07f
                     ,"y offset for items on the ground");
                 //SaveLimit
-                SaveLimit.Enabled = Config.Bind("SaveLimit","enabled",true
+                SaveLimit.Enabled = config.Bind("SaveLimit","enabled",true
                     ,"remove the limit to the amount of items that can be saved");
                 //InvisiblePlayer
-                InvisiblePlayer.Enabled = Config.Bind("InvisiblePlayer","enabled",true
+                InvisiblePlayer.Enabled = config.Bind("InvisiblePlayer","enabled",true
                     ,"attempts to fix late joining players appearing invisible to the rest of the lobby");
                 //SteamLobby
-                SteamLobby.AutoLobby = Config.Bind("SteamLobby","auto_lobby",false
+                SteamLobby.AutoLobby = config.Bind("SteamLobby","auto_lobby",false
                     ,"automatically reopen the lobby as soon as you reach orbit");
+                
             }
             
             internal static class SteamLobby
