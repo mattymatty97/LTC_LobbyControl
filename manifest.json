@@ -1,8 +1,8 @@
 {
   "name": "LobbyControl",
-  "version_number": "2.2.3",
+  "version_number": "2.2.4",
   "website_url": "https://github.com/mattymatty97/LTC_LobbyControl",
-  "description": "Allow fine control of the steam lobby whenever you're in orbit in between missions.",
+  "description": "A collection of Patches for Lethal Company with Quality of life changes for the Host.",
   "dependencies": [
     "BepInEx-BepInExPack-5.4.2100",
     "LethalAPI-LethalAPI_Terminal-1.0.0"

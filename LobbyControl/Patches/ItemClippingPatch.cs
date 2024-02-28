@@ -11,7 +11,7 @@ namespace LobbyControl.Patches
         {
             {
                 "Flashlight[6]",
-                new List<float>(4) { 0.02f, 270f, 0f, 90f }
+                new List<float>(4) { 0.035f, 270f, 0f, 90f }
             },
             {
                 "Jetpack[13]",
@@ -27,7 +27,7 @@ namespace LobbyControl.Patches
             },
             {
                 "Pro-flashlight[1]",
-                new List<float>(4) { 0.03f, 0f, 0f, 90f }
+                new List<float>(4) { 0.035f, 0f, 0f, 90f }
             },
             {
                 "Shovel[7]",
@@ -207,10 +207,15 @@ namespace LobbyControl.Patches
             }
         };
 
-        private static Vector3 FixPlacement(Vector3 hitPoint, Transform transform, GrabbableObject heldObject)
+        private static readonly HashSet<Item> manualItems = new HashSet<Item>();
+
+        internal static Vector3 FixPlacement(Vector3 hitPoint, Transform shelfTransform, GrabbableObject heldObject)
         {
-            hitPoint.y = transform.position.y + transform.localScale.z / 2f;
-            return hitPoint + Vector3.up * heldObject.itemProperties.verticalOffset;
+            hitPoint.y = shelfTransform.position.y + shelfTransform.localScale.z / 2f;
+            return hitPoint + Vector3.up * (heldObject.itemProperties.verticalOffset -
+                                            (manualItems.Contains(heldObject.itemProperties)
+                                                ? 0
+                                                : LobbyControl.PluginConfig.ItemClipping.groundYOffset.Value));
         }
 
         [HarmonyPatch(typeof(PlaceableObjectsSurface))]
@@ -223,9 +228,8 @@ namespace LobbyControl.Patches
             {
                 if (!LobbyControl.PluginConfig.ItemClipping.Enabled.Value)
                     return true;
-                
-                var val = default(RaycastHit);
-                if (Physics.Raycast(gameplayCamera.position, gameplayCamera.forward, out val, 7f,
+
+                if (Physics.Raycast(gameplayCamera.position, gameplayCamera.forward, out var val, 7f,
                         StartOfRound.Instance.collidersAndRoomMask, (QueryTriggerInteraction)1))
                 {
                     var bounds = __instance.placeableBounds.bounds;
@@ -249,63 +253,77 @@ namespace LobbyControl.Patches
         [HarmonyPatch(typeof(StartOfRound))]
         public class StartOfRoundPatch
         {
-            private static bool _updateNextTick;
-
             [HarmonyPostfix]
             [HarmonyPatch(nameof(StartOfRound.Awake))]
             public static void AwakePatch(StartOfRound __instance, bool __runOriginal)
             {
                 if (!LobbyControl.PluginConfig.ItemClipping.Enabled.Value)
                     return;
-                
+
                 if (!__runOriginal)
                     return;
-                
-                foreach (var items in __instance.allItemsList.itemsList)
-                {
-                    if (!ItemFixes.TryGetValue($"{items.itemName}[{items.itemId}]", out List<float> value))
-                        continue;
 
-                    items.verticalOffset = value[0];
-                    if (value.Count > 1) items.restingRotation.Set(value[1], value[2], value[3]);
+                foreach (var itemType in __instance.allItemsList.itemsList)
+                {
+                    if (!ItemFixes.TryGetValue($"{itemType.itemName}[{itemType.itemId}]", out List<float> value))
+                        continue;
+                    if (value.Count > 1)
+                        itemType.restingRotation.Set(value[1], value[2], value[3]);
+
+                    GameObject go = UnityEngine.Object.Instantiate<GameObject>(itemType.spawnPrefab, Vector3.zero,
+                        Quaternion.Euler(itemType.restingRotation));
+                    Renderer renderer = go.GetComponent<Renderer>();
+
+                    if (renderer != null)
+                    {
+                        itemType.verticalOffset = renderer.bounds.extents.y +
+                                                  LobbyControl.PluginConfig.ItemClipping.groundYOffset.Value;
+
+                        LobbyControl.Log.LogInfo(
+                            $"{itemType.itemName} computed vertical offset is now {itemType.verticalOffset}");
+                    }
+                    else
+                    {
+                        itemType.verticalOffset = value[0];
+                        manualItems.Add(itemType);
+                        LobbyControl.Log.LogInfo(
+                            $"{itemType.itemName} manual vertical offset is now {itemType.verticalOffset}");
+                    }
+
+                    Object.Destroy(go);
                 }
             }
+        }
+
+        [HarmonyPatch(typeof(GrabbableObject))]
+        internal class GrabbableObjectPatch
+        {
+            private static readonly HashSet<GrabbableObject> ObjectsToUpdate = new HashSet<GrabbableObject>();
 
             [HarmonyPostfix]
-            [HarmonyPatch(nameof(StartOfRound.LoadShipGrabbableItems))]
-            public static void GrabbablePatch(StartOfRound __instance, bool __runOriginal)
+            [HarmonyPatch(nameof(GrabbableObject.Start))]
+            public static void StartPostfix(GrabbableObject __instance)
             {
-                if (!LobbyControl.PluginConfig.ItemClipping.Enabled.Value)
+                if (__instance.transform.name == "ClipboardManual" || __instance.transform.name == "StickyNoteItem")
                     return;
-                
-                if (!__runOriginal)
-                    return;
-                
-                _updateNextTick = true;
+                //defer the update to the next tick
+                ObjectsToUpdate.Add(__instance);
             }
 
-            [HarmonyPostfix]
-            [HarmonyPatch(nameof(StartOfRound.Update))]
-            public static void UpdatePatch(StartOfRound __instance, bool __runOriginal)
+            [HarmonyPrefix]
+            [HarmonyPatch(nameof(GrabbableObject.Update))]
+            [HarmonyPriority(Priority.First)]
+            public static void UpdatePrefix(GrabbableObject __instance)
             {
-                if (!LobbyControl.PluginConfig.ItemClipping.Enabled.Value)
-                    return;
-                
-                if (!__runOriginal || !__instance.IsServer || !_updateNextTick)
+                if (!ObjectsToUpdate.Remove(__instance))
                     return;
 
-                _updateNextTick = false;
-
-                GrabbableObject[] objects = Object.FindObjectsOfType<GrabbableObject>();
-
-                foreach (var itemObject in objects)
-                    if (itemObject.transform.name != "ClipboardManual" && itemObject.transform.name != "StickyNoteItem")
-                        itemObject.transform.rotation = Quaternion.Euler(
-                            itemObject.itemProperties.restingRotation.x,
-                            itemObject.floorYRot == -1
-                                ? itemObject.transform.eulerAngles.y
-                                : itemObject.floorYRot + itemObject.itemProperties.floorYOffset + 90f,
-                            itemObject.itemProperties.restingRotation.z);
+                __instance.transform.rotation = Quaternion.Euler(
+                    __instance.itemProperties.restingRotation.x,
+                    __instance.floorYRot == -1
+                        ? __instance.transform.eulerAngles.y
+                        : __instance.floorYRot + __instance.itemProperties.floorYOffset + 90f,
+                    __instance.itemProperties.restingRotation.z);
             }
         }
     }

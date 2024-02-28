@@ -12,7 +12,7 @@ A collection of Patches for Lethal Company with Quality of life changes for the 
 Patches:
 --------
 - ### Steam Lobby ( all controls from terminal ):
-  - **re-open** the lobby everytime the Ship is **in Orbit**
+  - allow to **re-open** the lobby while the Ship is **in Orbit**
   - **change the visibility** of the lobby  
   (public, Invite-Only, Friends-Only)
   - **rename** the lobby

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 using BepInEx;
 using LethalAPI.LibTerminal.Attributes;
@@ -15,6 +16,11 @@ namespace LobbyControl
 {
     public class LobbyCommands
     {
+        
+        public static MethodInfo BeginSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__beginSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
+        public static MethodInfo EndSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__endSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
+
+        
         private const string DefaultText = @"
 - status        : prints the current lobby status
 
@@ -35,8 +41,6 @@ Extra:
 - namefix       : refresh player names for the entire lobby
 - dropall       : force all players to drop their inventory
 ";
-
-        private static QuickMenuManager _quickMenuManager;
 
         [TerminalCommand("Lobby")]
         [AllowedCaller(AllowedCaller.Host)]
@@ -112,6 +116,9 @@ Extra:
                         }
 
                         manager.SetLobbyJoinable(true);
+                        
+                        // Restore the friend invite button in the ESC menu.
+                        Object.FindObjectOfType<QuickMenuManager>().inviteFriendsTextAlpha.alpha = 1f;
 
                         var outText = "Lobby is now Open";
 
@@ -141,6 +148,9 @@ Extra:
                         }
 
                         manager.SetLobbyJoinable(false);
+                        
+                        // Hide the friend invite button in the ESC menu.
+                        Object.FindObjectOfType<QuickMenuManager>().inviteFriendsTextAlpha.alpha = 0f;
 
                         var outText = "Lobby is now Closed";
 
@@ -269,10 +279,6 @@ Extra:
                         var outText = "Lobby renamed to \"" + remaining + "\"";
                         LobbyControl.Log.LogInfo(outText);
 
-                        // Remove the friend invite button in the ESC menu.
-                        if (_quickMenuManager == null)
-                            _quickMenuManager = Object.FindObjectOfType<QuickMenuManager>();
-                        _quickMenuManager.inviteFriendsTextAlpha.alpha = 0f;
                         node.displayText = outText;
                         node.maxCharactersToType = node.displayText.Length + 2;
                         break;
@@ -389,9 +395,12 @@ Extra:
                             terminal.Start();
                             //sync the new values
                             startOfRound.SetMapScreenInfoToCurrentLevel();
-                            RefreshLobby();
-                            startOfRound.SyncShipUnlockablesServerRpc();
-                            startOfRound.SyncSuitsServerRpc();
+                            if (startOfRound.connectedPlayersAmount > 1)
+                            {
+                                RefreshLobby();
+                                startOfRound.SyncShipUnlockablesServerRpc();
+                                startOfRound.SyncSuitsServerRpc();
+                            }
                             LobbyControl.AutoSaveEnabled = LobbyControl.CanSave = ES3.Load("LC_SavingMethod",
                                 GameNetworkManager.Instance.currentSaveFileName, true);
                             LobbyControl.Log.LogInfo(outText);
@@ -476,15 +485,6 @@ Extra:
                     }
                 }
 
-                if (!GameNetworkManager.Instance.currentLobby.HasValue)
-                {
-                    terminalNode.displayText = "Lobby does not exist";
-                    {
-                        errorText = terminalNode;
-                        return true;
-                    }
-                }
-
                 errorText = null;
                 return false;
             }
@@ -494,26 +494,48 @@ Extra:
         {
             var startOfRound = StartOfRound.Instance;
             List<ulong> ulongList = new List<ulong>();
+            List<ulong> rpcList = new List<ulong>();
             for (var index = 0; index < startOfRound.allPlayerObjects.Length; ++index)
             {
                 var component = startOfRound.allPlayerObjects[index].GetComponent<NetworkObject>();
                 if (!component.IsOwnedByServer)
+                {
                     ulongList.Add(component.OwnerClientId);
+                    rpcList.Add(component.OwnerClientId);
+                }
                 else if (index == 0)
                     ulongList.Add(NetworkManager.Singleton.LocalClientId);
                 else
                     ulongList.Add(999UL);
             }
-
+            
+            ClientRpcParams clientRpcParams = new ClientRpcParams() {
+                Send = new ClientRpcSendParams() {
+                    TargetClientIds = rpcList,
+                },
+            };
+            
             var groupCredits = Object.FindObjectOfType<Terminal>().groupCredits;
             var profitQuota = TimeOfDay.Instance.profitQuota;
             var quotaFulfilled = TimeOfDay.Instance.quotaFulfilled;
             var timeUntilDeadline = (int)TimeOfDay.Instance.timeUntilDeadline;
             var controller = StartOfRound.Instance.localPlayerController;
-            startOfRound.OnPlayerConnectedClientRpc(controller.actualClientId, startOfRound.connectedPlayersAmount - 1,
-                ulongList.ToArray(), startOfRound.ClientPlayerList[controller.actualClientId], groupCredits,
-                startOfRound.currentLevelID, profitQuota, timeUntilDeadline, quotaFulfilled,
-                startOfRound.randomMapSeed, startOfRound.isChallengeFile);
+
+            FastBufferWriter bufferWriter = (FastBufferWriter)BeginSendClientRpc.Invoke(startOfRound, new object[]{886676601U, clientRpcParams, RpcDelivery.Reliable});
+            BytePacker.WriteValueBitPacked(bufferWriter, controller.actualClientId);
+            BytePacker.WriteValueBitPacked(bufferWriter, startOfRound.connectedPlayersAmount - 1);
+            bufferWriter.WriteValueSafe<bool>(true);
+            bufferWriter.WriteValueSafe<ulong>(ulongList.ToArray());
+            BytePacker.WriteValueBitPacked(bufferWriter, startOfRound.ClientPlayerList[controller.actualClientId]);
+            BytePacker.WriteValueBitPacked(bufferWriter, groupCredits);
+            BytePacker.WriteValueBitPacked(bufferWriter, startOfRound.currentLevelID);
+            BytePacker.WriteValueBitPacked(bufferWriter, profitQuota);
+            BytePacker.WriteValueBitPacked(bufferWriter, timeUntilDeadline);
+            BytePacker.WriteValueBitPacked(bufferWriter, quotaFulfilled);
+            BytePacker.WriteValueBitPacked(bufferWriter,  startOfRound.randomMapSeed);
+            bufferWriter.WriteValueSafe<bool>(in startOfRound.isChallengeFile, new FastBufferWriter.ForPrimitives());
+            EndSendClientRpc.Invoke(startOfRound, new object[]{bufferWriter, 886676601U, clientRpcParams, RpcDelivery.Reliable});
+
         }
 
     }
