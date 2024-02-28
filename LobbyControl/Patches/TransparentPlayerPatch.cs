@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Reflection;
 using GameNetcodeStuff;
 using HarmonyLib;
 using Unity.Netcode;
@@ -9,111 +10,112 @@ namespace LobbyControl.Patches
     [HarmonyPatch]
     internal class TransparentPlayerPatch
     {
+        private static readonly MethodInfo StartOfRoundBeginSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__beginSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
+        private static readonly MethodInfo StartOfRoundEndSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__endSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
+        private static readonly MethodInfo PlayerControllerBBeginSendClientRpc = typeof(PlayerControllerB).GetMethod(nameof(PlayerControllerB.__beginSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
+        private static readonly MethodInfo PlayerControllerBEndSendClientRpc = typeof(PlayerControllerB).GetMethod(nameof(PlayerControllerB.__endSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
+
         private static readonly Dictionary<ulong, int> ToRespawn = new Dictionary<ulong, int>();
         private static readonly Dictionary<ulong, int> ToDisconnect = new Dictionary<ulong, int>();
-        private static bool _alreadyReconnected = false;
-
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnClientDisconnect))]
-        private static void TrackDc(StartOfRound __instance, ulong clientId)
-        {
-            if (!LobbyControl.PluginConfig.InvisiblePlayer.Enabled.Value)
-                return;
-            
-            if (__instance.IsServer && !__instance.inShipPhase && !ToRespawn.ContainsKey(clientId) && clientId != __instance.localPlayerController.playerClientId)
-                ToRespawn.Add(clientId, -1);
-        }
         
         [HarmonyPrefix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnPlayerDC))]
         [HarmonyPriority(Priority.First)]
-        private static bool OnPlayerDCPatch(StartOfRound __instance, int playerObjectNumber, ulong clientId)
+        private static void OnPlayerDCPatch(StartOfRound __instance, int playerObjectNumber, ulong clientId)
         {
             if (!LobbyControl.PluginConfig.InvisiblePlayer.Enabled.Value)
-                return true;
-            
-            if (!__instance.IsServer || __instance.inShipPhase || !ToRespawn.ContainsKey(clientId))
-                return true;
+                return;
 
             PlayerControllerB controller = __instance.allPlayerScripts[playerObjectNumber];
 
             if (controller.isPlayerDead)
             {
-                ToRespawn[clientId] = playerObjectNumber;
-                if (_alreadyReconnected)
-                    ToDisconnect[clientId] = playerObjectNumber;
-                return !_alreadyReconnected;
+                if (__instance.IsServer)
+                {
+                    ToRespawn[clientId] = playerObjectNumber;
+                }
+                
+                controller.DisablePlayerModel(controller.gameObject, true, true);
             }
-
-            return true;
-        }        
-        
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnClientDisconnectClientRpc))]
-        [HarmonyPriority(Priority.First)]
-        private static bool OnClientDCPatch(StartOfRound __instance, int playerObjectNumber, ulong clientId)
-        {
-            if (!LobbyControl.PluginConfig.InvisiblePlayer.Enabled.Value)
-                return true;
-            
-            if (!__instance.IsServer || __instance.inShipPhase || !ToRespawn.ContainsKey(clientId))
-                return true;
-
-            PlayerControllerB controller = __instance.allPlayerScripts[playerObjectNumber];
-
-            if (controller.isPlayerDead)
-            {
-                ToRespawn[clientId] = playerObjectNumber;
-                if (_alreadyReconnected)
-                    ToDisconnect[clientId] = playerObjectNumber;
-                return !_alreadyReconnected;
-            }
-
-            return true;
         }
 
         [HarmonyPrefix]
-        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.EndOfGameClientRpc))]
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.unloadSceneForAllPlayers))]
         private static void RespawnDcPlayer(StartOfRound __instance)
         {
             if (!LobbyControl.PluginConfig.InvisiblePlayer.Enabled.Value)
                 return;
             
-            if (!__instance.IsServer || ToRespawn.Count <= 0)
+            if (!__instance.IsServer || ToRespawn.Count == 0)
                 return;
             
             List<ulong> ulongList = new List<ulong>();
+            List<ulong> rpcList = new List<ulong>();
             for (int index = 0; index < __instance.allPlayerObjects.Length; ++index)
             {
                 NetworkObject component = __instance.allPlayerObjects[index].GetComponent<NetworkObject>();
                 if (ToRespawn.TryGetValue(component.OwnerClientId, out var playerObjectIndex) && playerObjectIndex != -1)
-                    ulongList.Add(999UL);
-                else if (!component.IsOwnedByServer)
                     ulongList.Add(component.OwnerClientId);
+                else if (!component.IsOwnedByServer)
+                {
+                    ulongList.Add(component.OwnerClientId);
+                    rpcList.Add(component.OwnerClientId);
+                }
                 else if (index == 0)
                     ulongList.Add(NetworkManager.Singleton.LocalClientId);
                 else
                     ulongList.Add(999UL);
             }
             
-            var groupCredits = UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits;
+            ClientRpcParams clientRpcParams = new ClientRpcParams() {
+                Send = new ClientRpcSendParams() {
+                    TargetClientIds = rpcList,
+                },
+            };
+            
+            var serverMoneyAmount = UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits;
             var profitQuota = TimeOfDay.Instance.profitQuota;
             var quotaFulfilled = TimeOfDay.Instance.quotaFulfilled;
             var timeUntilDeadline = (int) TimeOfDay.Instance.timeUntilDeadline;
+            var levelID = __instance.currentLevelID;
+            var connectedPlayers = __instance.connectedPlayersAmount;
+            var randomSeed = __instance.randomMapSeed;
+            var isChallenge = __instance.isChallengeFile;
+            
+            int count = 1;
             foreach (var dcPlayer in new Dictionary<ulong,int>(ToRespawn))
             {
-                if (dcPlayer.Value == -1)
-                    continue;
                 
-                __instance.OnPlayerConnectedClientRpc(dcPlayer.Key, __instance.connectedPlayersAmount, ulongList.ToArray(), 
-                    dcPlayer.Value, groupCredits, __instance.currentLevelID, profitQuota, 
-                    timeUntilDeadline, quotaFulfilled, __instance.randomMapSeed, __instance.isChallengeFile);
+                //client Join
+                FastBufferWriter bufferWriter = (FastBufferWriter)StartOfRoundBeginSendClientRpc.Invoke(__instance, new object[]{886676601U, clientRpcParams, RpcDelivery.Reliable});
+                BytePacker.WriteValueBitPacked(bufferWriter, dcPlayer.Key);
+                BytePacker.WriteValueBitPacked(bufferWriter, connectedPlayers + count);
+                bufferWriter.WriteValueSafe<bool>(true);
+                bufferWriter.WriteValueSafe<ulong>(ulongList.ToArray());
+                BytePacker.WriteValueBitPacked(bufferWriter, dcPlayer.Value);
+                BytePacker.WriteValueBitPacked(bufferWriter, serverMoneyAmount);
+                BytePacker.WriteValueBitPacked(bufferWriter, levelID);
+                BytePacker.WriteValueBitPacked(bufferWriter, profitQuota);
+                BytePacker.WriteValueBitPacked(bufferWriter, timeUntilDeadline);
+                BytePacker.WriteValueBitPacked(bufferWriter, quotaFulfilled);
+                BytePacker.WriteValueBitPacked(bufferWriter, randomSeed);
+                bufferWriter.WriteValueSafe<bool>(in isChallenge);
+                StartOfRoundEndSendClientRpc.Invoke(__instance, new object[]{bufferWriter, 886676601U, clientRpcParams, RpcDelivery.Reliable});
                 
-                __instance.allPlayerScripts[dcPlayer.Value].KillPlayerClientRpc(dcPlayer.Value,false, Vector3.zero, (int)CauseOfDeath.Kicking, 0);
+                //Client Kill
+                PlayerControllerB controller = __instance.allPlayerScripts[dcPlayer.Value];
+                bufferWriter = (FastBufferWriter)PlayerControllerBBeginSendClientRpc.Invoke(controller, new object[]{168339603U, clientRpcParams, RpcDelivery.Reliable});
+                BytePacker.WriteValueBitPacked(bufferWriter, dcPlayer.Value);
+                bufferWriter.WriteValueSafe<bool>(false);
+                bufferWriter.WriteValueSafe(Vector3.zero);
+                BytePacker.WriteValueBitPacked(bufferWriter, (int)CauseOfDeath.Kicking);
+                BytePacker.WriteValueBitPacked(bufferWriter, 0);
+                PlayerControllerBEndSendClientRpc.Invoke(controller, new object[]{bufferWriter, 168339603U, clientRpcParams, RpcDelivery.Reliable});
                 
                 ToDisconnect[dcPlayer.Key] = dcPlayer.Value;
             }
-            _alreadyReconnected = true;
+            
+            ToRespawn.Clear();
         }
         
         [HarmonyPostfix]
@@ -124,17 +126,17 @@ namespace LobbyControl.Patches
             if (!LobbyControl.PluginConfig.InvisiblePlayer.Enabled.Value)
                 return;
             
-            if (!__runOriginal || !__instance.IsServer || ToDisconnect.Count <= 0) 
+            if (!__runOriginal || !__instance.IsServer || ToDisconnect.Count == 0) 
                 return;
             
-            _alreadyReconnected = false;
-            
             List<ulong> ulongList = new List<ulong>();
+            
             foreach (KeyValuePair<ulong, int> clientPlayer in __instance.ClientPlayerList)
             {
-                if (!ToDisconnect.TryGetValue(clientPlayer.Key, out var playerObjectIndex) || playerObjectIndex == -1)
+                if (clientPlayer.Key != __instance.localPlayerController.actualClientId )
                     ulongList.Add(clientPlayer.Key);
             }
+            
             ClientRpcParams clientRpcParams = new ClientRpcParams()
             {
                 Send = new ClientRpcSendParams()
@@ -142,26 +144,28 @@ namespace LobbyControl.Patches
                     TargetClientIds = ulongList.ToArray()
                 }
             };
+            
             foreach (var player in new Dictionary<ulong,int>(ToDisconnect))
             {
-                __instance.OnPlayerDC(player.Value, player.Key);
-                __instance.OnClientDisconnectClientRpc(player.Value, player.Key, clientRpcParams);
+                //__instance.OnClientDisconnectClientRpc(player.Value, player.Key, clientRpcParams);
+                FastBufferWriter bufferWriter = (FastBufferWriter)StartOfRoundBeginSendClientRpc.Invoke(__instance, new object[]{475465488U, clientRpcParams, RpcDelivery.Reliable});
+                BytePacker.WriteValueBitPacked(bufferWriter, player.Value);
+                BytePacker.WriteValueBitPacked(bufferWriter, player.Key);
+                StartOfRoundEndSendClientRpc.Invoke(__instance, new object[]{bufferWriter, 475465488U, clientRpcParams, RpcDelivery.Reliable});
             }
             
-            ToRespawn.Clear();
             ToDisconnect.Clear();
         }
         
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.StartGame))]
-        private static void ClearOnStart(StartOfRound __instance)
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.Awake))]
+        private static void ClearOnBoot(StartOfRound __instance)
         {
             if (!__instance.IsServer)
                 return;
             
             ToRespawn.Clear();
             ToDisconnect.Clear();
-            _alreadyReconnected = false;
         }
     }
 }

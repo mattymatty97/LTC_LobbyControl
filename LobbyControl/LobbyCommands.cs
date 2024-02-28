@@ -17,9 +17,8 @@ namespace LobbyControl
     public class LobbyCommands
     {
         
-        public static MethodInfo BeginSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__beginSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
-        public static MethodInfo EndSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__endSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
-
+        private static readonly MethodInfo BeginSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__beginSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
+        private static readonly MethodInfo EndSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__endSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
         
         private const string DefaultText = @"
 - status        : prints the current lobby status
@@ -316,11 +315,6 @@ Extra:
 
                         LobbyControl.Log.LogDebug("Saving Lobby");
                         var manager = GameNetworkManager.Instance;
-                        if (!manager.currentLobby.HasValue)
-                        {
-                            node.displayText = "Failed to fetch lobby ( was null )";
-                            break;
-                        }
 
                         var oldSaveFileName = manager.currentSaveFileName;
                         if (!remaining.IsNullOrWhiteSpace())
@@ -365,11 +359,6 @@ Extra:
 
                         LobbyControl.Log.LogDebug("Reloading Lobby");
                         var manager = GameNetworkManager.Instance;
-                        if (!manager.currentLobby.HasValue)
-                        {
-                            node.displayText = "Failed to fetch lobby ( was null )";
-                            break;
-                        }
 
                         var oldSaveFileName = manager.currentSaveFileName;
                         if (!remaining.IsNullOrWhiteSpace())
