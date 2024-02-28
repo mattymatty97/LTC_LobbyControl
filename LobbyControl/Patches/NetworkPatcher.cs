@@ -23,7 +23,7 @@ namespace LobbyControl.Patches
             if (!__runOriginal || response.Approved || response.Reason != "Game has already started!")
                 return;
 
-            if (__instance.gameHasStarted && StartOfRound.Instance.inShipPhase)
+            if (__instance.gameHasStarted && __instance.currentLobby.HasValue && LobbyPatcher.IsOpen(__instance.currentLobby.Value))
             {
                 LobbyControl.Log.LogDebug("Approving incoming late connection.");
                 response.Reason = "";
@@ -32,7 +32,7 @@ namespace LobbyControl.Patches
         }
 
         /// <summary>
-        ///     Make the friend invite button work again once we are back in orbit.
+        ///     Make the friend invite button work again once we open the lobby.
         /// </summary>
         [HarmonyPostfix]
         [HarmonyPatch(typeof(QuickMenuManager), nameof(QuickMenuManager.InviteFriendsButton))]
@@ -40,9 +40,9 @@ namespace LobbyControl.Patches
         {
             if (!__runOriginal)
                 return;
-            
+            var manager = GameNetworkManager.Instance;
             // Only do this if the game isn't doing it by itself already.
-            if (GameNetworkManager.Instance.gameHasStarted && StartOfRound.Instance.inShipPhase)
+            if (GameNetworkManager.Instance.gameHasStarted && manager.currentLobby.HasValue && LobbyPatcher.IsOpen(manager.currentLobby.Value))
                 GameNetworkManager.Instance.InviteFriendsUI();
         }
 
@@ -72,9 +72,7 @@ namespace LobbyControl.Patches
                 GameNetworkManager.Instance.SetLobbyJoinable(false);
 
                 // Remove the friend invite button in the ESC menu.
-                if (_quickMenuManager == null)
-                    _quickMenuManager = Object.FindObjectOfType<QuickMenuManager>();
-                _quickMenuManager.inviteFriendsTextAlpha.alpha = 0f;
+                Object.FindObjectOfType<QuickMenuManager>().inviteFriendsTextAlpha.alpha = 0f;
             }
         }
 
@@ -120,10 +118,18 @@ namespace LobbyControl.Patches
 
             LobbyControl.CanModifyLobby = true;
 
-            // Restore the friend invite button in the ESC menu.
-            if (_quickMenuManager == null)
-                _quickMenuManager = Object.FindObjectOfType<QuickMenuManager>();
-            _quickMenuManager.inviteFriendsTextAlpha.alpha = 1f;
+            if (LobbyControl.PluginConfig.SteamLobby.AutoLobby.Value)
+            {
+                var manager = GameNetworkManager.Instance;
+
+                if (!manager.currentLobby.HasValue)
+                    yield break;
+
+                manager.SetLobbyJoinable(true);
+
+                // Restore the friend invite button in the ESC menu.
+                Object.FindObjectOfType<QuickMenuManager>().inviteFriendsTextAlpha.alpha = 1f;
+            }
         }
         
         /// <summary>

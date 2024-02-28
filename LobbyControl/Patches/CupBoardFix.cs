@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Security.Policy;
 using HarmonyLib;
 using Unity.Netcode;
 using UnityEngine;
@@ -9,64 +11,116 @@ namespace LobbyControl.Patches
     [HarmonyPatch]
     internal class CupBoardFix
     {
-        
+        private static readonly HashSet<GrabbableObject> NoGravityObjects = new HashSet<GrabbableObject>();
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(NetworkBehaviour), nameof(NetworkBehaviour.OnNetworkSpawn))]
+        private static void ObjectLoad(NetworkBehaviour __instance)
+        {
+            if (__instance is GrabbableObject grabbable)
+            {
+                if (!LobbyControl.PluginConfig.CupBoard.Enabled.Value)
+                    return;
+
+                var tolerance = LobbyControl.PluginConfig.CupBoard.Tolerance.Value;
+                try
+                {
+                    var pos = grabbable.transform.position;
+                    GameObject closet = GameObject.Find("/Environment/HangarShip/StorageCloset");
+                    PlaceableObjectsSurface[] storageShelves =
+                        closet.GetComponentsInChildren<PlaceableObjectsSurface>();
+                    MeshCollider collider = closet.GetComponent<MeshCollider>();
+                    float distance = float.MaxValue;
+                    PlaceableObjectsSurface found = null;
+                    Vector3? closest = null;
+                    foreach (var shelf in storageShelves)
+                    {
+                        if (!shelf.placeableBounds.bounds.Contains(pos))
+                            continue;
+
+                        var hitPoint = shelf.GetComponent<Collider>().ClosestPoint(pos);
+                        var tmp = pos.y - hitPoint.y;
+                        if (tmp >= 0 && tmp < distance)
+                        {
+                            found = shelf;
+                            distance = tmp;
+                            closest = hitPoint;
+                        }
+                    }
+
+                    if (found != null && closest.HasValue)
+                    {
+                        var transform = grabbable.transform;
+                        if (LobbyControl.PluginConfig.ItemClipping.Enabled.Value)
+                        {
+                            var newPos = ItemClippingPatch.FixPlacement(closest.Value, found.transform, grabbable);
+                            transform.position = newPos;
+                        }
+                        else
+                        {
+                            transform.position = closest.Value + LobbyControl.PluginConfig.CupBoard.Shift.Value;
+                        }
+                        
+                        transform.parent = closet.transform;
+                        
+                        NoGravityObjects.Add(grabbable);
+                    }
+                    else
+                    {
+                        //check if we're above the closet
+                        var hitPoint = collider.bounds.ClosestPoint(pos);
+                        var xDelta = hitPoint.x - pos.x;
+                        var zDelta = hitPoint.z - pos.z;
+                        var yDelta = pos.y - hitPoint.y;
+                        if (Math.Abs(xDelta) < tolerance && Math.Abs(zDelta) < tolerance && yDelta > 0)
+                        {
+                            grabbable.itemProperties.itemSpawnsOnGround = false;
+
+                            if (Math.Abs(xDelta) > 0)
+                                grabbable.transform.position += new Vector3(xDelta, 0, 0);
+                            if (Math.Abs(zDelta) > 0)
+                                grabbable.transform.position += new Vector3(0, 0, zDelta);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LobbyControl.Log.LogError(ex);
+                }
+            }
+        }
+
         [HarmonyPrefix]
         [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.Start))]
         private static void ObjectLoad(GrabbableObject __instance, ref object[] __state)
         {
+            __state = new object[] { __instance.itemProperties.itemSpawnsOnGround };
+            
             if (!LobbyControl.PluginConfig.CupBoard.Enabled.Value)
                 return;
 
-            var tolerance = LobbyControl.PluginConfig.CupBoard.Tolerance.Value;
-            try
+            if (NoGravityObjects.Remove(__instance))
             {
-                var pos = __instance.transform.position;
-                __state = new object[] { __instance.itemProperties.itemSpawnsOnGround };
-                GameObject closet = GameObject.Find("/Environment/HangarShip/StorageCloset");
-                MeshCollider collider = closet.GetComponent<MeshCollider>();
-                if (collider.bounds.Contains(pos))
-                {
-                    var transform = __instance.transform;
-                    transform.parent = closet.transform;
-                    transform.localPosition += LobbyControl.PluginConfig.CupBoard.Shift.Value;
-                    __instance.itemProperties.itemSpawnsOnGround = false;
-                }
-                else
-                {
-                    var closest = collider.bounds.ClosestPoint(pos);
-                    var yDelta = pos.y - closest.y;
-                    if (Math.Abs(closest.x - pos.x) < tolerance && Math.Abs(closest.z - pos.z) < tolerance && yDelta >= -tolerance)
-                    {
-                        __instance.itemProperties.itemSpawnsOnGround = false;
-                        if (yDelta <= 0)
-                            __instance.transform.position += new Vector3(0, yDelta, 0);;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                LobbyControl.Log.LogError(ex);
+                __instance.itemProperties.itemSpawnsOnGround = false;
             }
         }
-        
+
         [HarmonyPostfix]
         [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.Start))]
         private static void ObjectLoad2(GrabbableObject __instance, object[] __state, bool __runOriginal)
         {
             if (!LobbyControl.PluginConfig.CupBoard.Enabled.Value)
                 return;
-            if (!__runOriginal)
-                return;
-            
+
             __instance.itemProperties.itemSpawnsOnGround = (bool)__state[0];
         }
-        
+
         [HarmonyPrefix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.LoadUnlockables))]
         private static void CozyImprovementsFix(StartOfRound __instance)
         {
             GameObject closet = GameObject.Find("/Environment/HangarShip/StorageCloset");
-            if (closet == null) 
+            if (closet == null)
                 return;
 
             foreach (Light light in closet.GetComponentsInChildren<Light>())
@@ -74,26 +128,6 @@ namespace LobbyControl.Patches
                 if (light.gameObject.transform.name == "StorageClosetLight")
                     Object.Destroy(light.gameObject);
             }
-            
-        }
-        
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnPlayerConnectedClientRpc))]
-        private static void CozyImprovementsFix2(StartOfRound __instance, ulong clientId)
-        {
-            if (clientId != NetworkManager.Singleton.LocalClientId)
-                return;
-            
-            GameObject closet = GameObject.Find("/Environment/HangarShip/StorageCloset");
-            if (closet == null) 
-                return;
-
-            foreach (Light light in closet.GetComponentsInChildren<Light>())
-            {
-                if (light.gameObject.transform.name == "StorageClosetLight")
-                    Object.Destroy(light.gameObject);
-            }
-            
         }
     }
 }

@@ -17,7 +17,7 @@ namespace LobbyControl
     {
         public const string GUID = "com.github.mattymatty.LobbyControl";
         public const string NAME = "LobbyControl";
-        public const string VERSION = "2.2.3";
+        public const string VERSION = "2.2.4";
 
         internal static ManualLogSource Log;
 
@@ -223,12 +223,22 @@ namespace LobbyControl
                 //ItemClipping
                 ItemClipping.Enabled = Config.Bind("ItemClipping","enabled",true
                     ,"fix rotation and height of various items when on the Ground");
+                ItemClipping.groundYOffset = Config.Bind("ItemClipping","ground_y_offset",0.07f
+                    ,"y offset for items on the ground");
                 //SaveLimit
                 SaveLimit.Enabled = Config.Bind("SaveLimit","enabled",true
                     ,"remove the limit to the amount of items that can be saved");
                 //InvisiblePlayer
                 InvisiblePlayer.Enabled = Config.Bind("InvisiblePlayer","enabled",true
                     ,"attempts to fix late joining players appearing invisible to the rest of the lobby");
+                //SteamLobby
+                SteamLobby.AutoLobby = Config.Bind("SteamLobby","auto_lobby",false
+                    ,"automatically reopen the lobby as soon as you reach orbit");
+            }
+            
+            internal static class SteamLobby
+            {
+                internal static ConfigEntry<bool> AutoLobby;
             }
             
             internal static class CupBoard
@@ -253,6 +263,7 @@ namespace LobbyControl
             internal static class ItemClipping
             {
                 internal static ConfigEntry<bool> Enabled;
+                internal static ConfigEntry<float> groundYOffset;
             }
             
             internal static class SaveLimit
