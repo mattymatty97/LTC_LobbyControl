@@ -57,24 +57,6 @@ namespace LobbyControl.Patches
             return code;
         }
         
-/*
-        /// <summary>
-        ///     Ensure that any incoming connections are properly accepted.
-        /// </summary>
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.ConnectionApproval))]
-        [HarmonyPriority(Priority.First)]
-        private static void FixConnectionApprovalPrefix(GameNetworkManager __instance, bool __runOriginal, ref object[] __state)
-        {
-            __state = new object[]{GameNetworkManager.Instance.gameHasStarted};
-            
-            if (!__runOriginal)
-                return;
-
-            // make the function believe we haven't started the lobby yet.
-            GameNetworkManager.Instance.gameHasStarted = false;
-        }
-    */  
 
         /// <summary>
         ///     Ensure that any incoming connections are properly accepted.
@@ -83,14 +65,10 @@ namespace LobbyControl.Patches
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.ConnectionApproval))]
         [HarmonyPriority(0)]
         private static void FixConnectionApprovalPostFix(GameNetworkManager __instance, bool __runOriginal, 
-            NetworkManager.ConnectionApprovalResponse response/*, ref object[] __state*/)
+            NetworkManager.ConnectionApprovalResponse response)
         {
-            /*
-            // reset the started status.
-            GameNetworkManager.Instance.gameHasStarted = (bool)__state[0];
-            */
-            
-            if (!__runOriginal)
+
+            if (!__runOriginal || !response.Approved)
                 return;
             
             //if we're allowing late connections log it
@@ -235,7 +213,7 @@ namespace LobbyControl.Patches
                 return true;
             }
 
-            LobbyControl.Log.LogWarning($"Player with ID {clientId} attempted to join a full lobby!");
+            LobbyControl.Log.LogWarning($"Player with ID {clientId} attempted to join a full lobby! pending {PendingClients.Count}");
             NetworkManager.Singleton.DisconnectClient(clientId);
             return false;
 
@@ -249,9 +227,11 @@ namespace LobbyControl.Patches
             if (!__instance.IsServer)
                 return;
 
-            if (__instance.__rpc_exec_stage == NetworkBehaviour.__RpcExecStage.Client &&
-                (NetworkManager.Singleton.IsClient || NetworkManager.Singleton.IsHost))
-                PendingClients.Remove(clientId);
+            NetworkManager networkManager = __instance.NetworkManager;
+            if (__instance.__rpc_exec_stage != NetworkBehaviour.__RpcExecStage.Client || !networkManager.IsClient && !networkManager.IsHost)
+                return;
+            
+            PendingClients.Remove(clientId);
         }
     }
 }

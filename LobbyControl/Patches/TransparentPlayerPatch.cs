@@ -84,7 +84,7 @@ namespace LobbyControl.Patches
             var randomSeed = __instance.randomMapSeed;
             var isChallenge = __instance.isChallengeFile;
             
-            int count = 1;
+            int count = 0;
             foreach (var dcPlayer in new Dictionary<ulong,int>(ToRespawn))
             {
                 PlayerControllerB controller = __instance.allPlayerScripts[dcPlayer.Value];
