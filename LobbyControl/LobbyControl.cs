@@ -14,9 +14,10 @@ using UnityEngine.UIElements.Collections;
 namespace LobbyControl
 {
     [BepInPlugin(GUID, NAME, VERSION)]
+    [BepInDependency("LethalAPI.Terminal","1.0.0")]
     internal class LobbyControl : BaseUnityPlugin
     {
-        public const string GUID = "com.github.mattymatty";
+        public const string GUID = "mattymatty.LobbyControl";
         public const string NAME = "LobbyControl";
         public const string VERSION = "2.2.4";
 
@@ -225,7 +226,7 @@ namespace LobbyControl
                 //ItemClipping
                 ItemClipping.Enabled = config.Bind("ItemClipping","enabled",true
                     ,"fix rotation and height of various items when on the Ground");
-                ItemClipping.groundYOffset = config.Bind("ItemClipping","ground_y_offset",0.07f
+                ItemClipping.VerticalOffset = config.Bind("ItemClipping","vertical_offset",0.07f
                     ,"y offset for items on the ground");
                 //SaveLimit
                 SaveLimit.Enabled = config.Bind("SaveLimit","enabled",true
@@ -236,7 +237,11 @@ namespace LobbyControl
                 //SteamLobby
                 SteamLobby.AutoLobby = config.Bind("SteamLobby","auto_lobby",false
                     ,"automatically reopen the lobby as soon as you reach orbit");
-                
+                //Unnamed
+                UnnamedPatch.Enabled = config.Bind("Unnamed","enabled",true
+                    ,"prevent items from falling below the ship");
+                UnnamedPatch.verticalOffest = config.Bind("Unnamed","vertical_offset",0.5f
+                    ,"vertical offset to apply to objects on load");
             }
             
             internal static class SteamLobby
@@ -266,7 +271,7 @@ namespace LobbyControl
             internal static class ItemClipping
             {
                 internal static ConfigEntry<bool> Enabled;
-                internal static ConfigEntry<float> groundYOffset;
+                internal static ConfigEntry<float> VerticalOffset;
             }
             
             internal static class SaveLimit
@@ -277,6 +282,12 @@ namespace LobbyControl
             internal static class InvisiblePlayer
             {
                 internal static ConfigEntry<bool> Enabled;
+            }
+            
+            internal static class UnnamedPatch
+            {
+                internal static ConfigEntry<bool> Enabled;
+                internal static ConfigEntry<float> verticalOffest;
             }
         }
     }

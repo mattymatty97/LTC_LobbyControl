@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
@@ -380,7 +381,7 @@ Extra:
                             //try reload the save file
                             startOfRound.SetTimeAndPlanetToSavedSettings();
                             LobbyControl.ReloadShipUnlockables();
-                            startOfRound.LoadShipGrabbableItems();
+                            startOfRound.StartCoroutine(LoadItemsCoroutine());
                             terminal.Start();
                             //sync the new values
                             startOfRound.SetMapScreenInfoToCurrentLevel();
@@ -477,6 +478,12 @@ Extra:
                 errorText = null;
                 return false;
             }
+        }
+
+        private static IEnumerator LoadItemsCoroutine()
+        {
+            yield return new WaitForSeconds(2);
+            StartOfRound.Instance.LoadShipGrabbableItems();
         }
 
         private static void RefreshLobby()

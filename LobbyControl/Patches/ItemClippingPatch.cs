@@ -31,7 +31,7 @@ namespace LobbyControl.Patches
             },
             {
                 "Shovel[7]",
-                new List<float>(4) { 0f, 0f, -90f, -90f }
+                new List<float>(4) { 0.3f, 0f, -90f, -90f }
             },
             {
                 "Stun grenade[12]",
@@ -215,7 +215,7 @@ namespace LobbyControl.Patches
             return hitPoint + Vector3.up * (heldObject.itemProperties.verticalOffset -
                                             (manualItems.Contains(heldObject.itemProperties)
                                                 ? 0
-                                                : LobbyControl.PluginConfig.ItemClipping.groundYOffset.Value));
+                                                : LobbyControl.PluginConfig.ItemClipping.VerticalOffset.Value));
         }
 
         [HarmonyPatch(typeof(PlaceableObjectsSurface))]
@@ -265,8 +265,12 @@ namespace LobbyControl.Patches
 
                 foreach (var itemType in __instance.allItemsList.itemsList)
                 {
-                    if (!ItemFixes.TryGetValue($"{itemType.itemName}[{itemType.itemId}]", out List<float> value))
+                    if (itemType.spawnPrefab == null)
                         continue;
+                    
+                    if (!ItemFixes.TryGetValue($"{itemType.itemName}[{itemType.itemId}]", out List<float> value))
+                        value = new List<float>();
+                    
                     if (value.Count > 1)
                         itemType.restingRotation.Set(value[1], value[2], value[3]);
 
@@ -276,18 +280,29 @@ namespace LobbyControl.Patches
 
                     if (renderer != null)
                     {
-                        itemType.verticalOffset = renderer.bounds.extents.y +
-                                                  LobbyControl.PluginConfig.ItemClipping.groundYOffset.Value;
-
+                        var bounds = renderer.bounds;
+                        itemType.verticalOffset = -bounds.min.y +
+                                                  LobbyControl.PluginConfig.ItemClipping.VerticalOffset.Value;
+                        
+                        
+                        
                         LobbyControl.Log.LogInfo(
                             $"{itemType.itemName} computed vertical offset is now {itemType.verticalOffset}");
                     }
                     else
                     {
-                        itemType.verticalOffset = value[0];
-                        manualItems.Add(itemType);
-                        LobbyControl.Log.LogInfo(
-                            $"{itemType.itemName} manual vertical offset is now {itemType.verticalOffset}");
+                        if (value.Count > 0)
+                        {
+                            itemType.verticalOffset = value[0];
+                            manualItems.Add(itemType);
+                            LobbyControl.Log.LogInfo(
+                                $"{itemType.itemName} manual vertical offset is now {itemType.verticalOffset}");
+                        }
+                        else
+                        {
+                            LobbyControl.Log.LogInfo(
+                                $"{itemType.itemName} original vertical offset is {itemType.verticalOffset}");
+                        }
                     }
 
                     Object.Destroy(go);
