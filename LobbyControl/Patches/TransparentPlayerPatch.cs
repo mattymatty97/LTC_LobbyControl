@@ -30,11 +30,13 @@ namespace LobbyControl.Patches
 
             if (controller.isPlayerDead)
             {
+                LobbyControl.Log.LogWarning($"Player {controller.playerUsername} disconnected while Dead!");
                 if (__instance.IsServer)
                 {
+                    LobbyControl.Log.LogInfo($"Player {controller.playerUsername} added to the list of Respawnables");
                     ToRespawn[clientId] = playerObjectNumber;
                 }
-                
+                LobbyControl.Log.LogDebug($"Model of player {controller.playerUsername} has been re-enabled");
                 controller.DisablePlayerModel(controller.gameObject, true, true);
             }
         }
@@ -85,7 +87,7 @@ namespace LobbyControl.Patches
             int count = 1;
             foreach (var dcPlayer in new Dictionary<ulong,int>(ToRespawn))
             {
-                
+                PlayerControllerB controller = __instance.allPlayerScripts[dcPlayer.Value];
                 //client Join
                 FastBufferWriter bufferWriter = (FastBufferWriter)StartOfRoundBeginSendClientRpc.Invoke(__instance, new object[]{886676601U, clientRpcParams, RpcDelivery.Reliable});
                 BytePacker.WriteValueBitPacked(bufferWriter, dcPlayer.Key);
@@ -101,9 +103,9 @@ namespace LobbyControl.Patches
                 BytePacker.WriteValueBitPacked(bufferWriter, randomSeed);
                 bufferWriter.WriteValueSafe<bool>(in isChallenge);
                 StartOfRoundEndSendClientRpc.Invoke(__instance, new object[]{bufferWriter, 886676601U, clientRpcParams, RpcDelivery.Reliable});
-                
+                LobbyControl.Log.LogInfo($"Player {controller.playerUsername} has been reconnected by host");
+
                 //Client Kill
-                PlayerControllerB controller = __instance.allPlayerScripts[dcPlayer.Value];
                 bufferWriter = (FastBufferWriter)PlayerControllerBBeginSendClientRpc.Invoke(controller, new object[]{168339603U, clientRpcParams, RpcDelivery.Reliable});
                 BytePacker.WriteValueBitPacked(bufferWriter, dcPlayer.Value);
                 bufferWriter.WriteValueSafe<bool>(false);
@@ -111,7 +113,8 @@ namespace LobbyControl.Patches
                 BytePacker.WriteValueBitPacked(bufferWriter, (int)CauseOfDeath.Kicking);
                 BytePacker.WriteValueBitPacked(bufferWriter, 0);
                 PlayerControllerBEndSendClientRpc.Invoke(controller, new object[]{bufferWriter, 168339603U, clientRpcParams, RpcDelivery.Reliable});
-                
+                LobbyControl.Log.LogInfo($"Player {controller.playerUsername} has been killed by host");
+
                 ToDisconnect[dcPlayer.Key] = dcPlayer.Value;
             }
             
@@ -147,11 +150,13 @@ namespace LobbyControl.Patches
             
             foreach (var player in new Dictionary<ulong,int>(ToDisconnect))
             {
+                PlayerControllerB controller = __instance.allPlayerScripts[player.Value];
                 //__instance.OnClientDisconnectClientRpc(player.Value, player.Key, clientRpcParams);
                 FastBufferWriter bufferWriter = (FastBufferWriter)StartOfRoundBeginSendClientRpc.Invoke(__instance, new object[]{475465488U, clientRpcParams, RpcDelivery.Reliable});
                 BytePacker.WriteValueBitPacked(bufferWriter, player.Value);
                 BytePacker.WriteValueBitPacked(bufferWriter, player.Key);
                 StartOfRoundEndSendClientRpc.Invoke(__instance, new object[]{bufferWriter, 475465488U, clientRpcParams, RpcDelivery.Reliable});
+                LobbyControl.Log.LogInfo($"Player {controller.playerUsername} has been removed and should be visible");
             }
             
             ToDisconnect.Clear();
