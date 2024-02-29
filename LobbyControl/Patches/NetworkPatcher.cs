@@ -1,39 +1,115 @@
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using HarmonyLib;
+using Mono.Cecil.Cil;
 using Unity.Netcode;
 using UnityEngine;
 using Object = UnityEngine.Object;
+using OpCodes = System.Reflection.Emit.OpCodes;
 
 namespace LobbyControl.Patches
 {
     [HarmonyPatch]
     internal class NetworkPatcher
     {
-        private static QuickMenuManager _quickMenuManager;
+        
+        /// <summary>
+        ///     Do not check for gameHasStarted.
+        /// </summary>
+        [HarmonyTranspiler]
+        [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.ConnectionApproval))]
+        private static IEnumerable<CodeInstruction> FixConnectionApprovalPrefix(IEnumerable<CodeInstruction> instructions)
+        {
+            FieldInfo gameStartedField = typeof(GameNetworkManager).GetField(nameof(GameNetworkManager.gameHasStarted));
+            List<CodeInstruction> code = instructions.ToList();
+
+            for (var index = 0; index < code.Count; index++)
+            {
+                var curr = code[index];
+                if (curr.LoadsField(gameStartedField))
+                {
+                    var next = code[index + 1];
+                    var prec = code[index - 1];
+                    if (next.Branches(out var dest))
+                    {
+                        code[index - 1] = new CodeInstruction(OpCodes.Nop)
+                        {
+                            labels = prec.labels,
+                            blocks = prec.blocks
+                        };
+                        code[index] = new CodeInstruction(OpCodes.Nop)
+                        {
+                            labels = curr.labels,
+                            blocks = curr.blocks
+                        };
+                        code[index + 1] = new CodeInstruction(OpCodes.Br, dest)
+                        {
+                            labels = next.labels,
+                            blocks = next.blocks
+                        };
+                        break;
+                    }
+                }
+            }
+
+            return code;
+        }
+        
+/*
+        /// <summary>
+        ///     Ensure that any incoming connections are properly accepted.
+        /// </summary>
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.ConnectionApproval))]
+        [HarmonyPriority(Priority.First)]
+        private static void FixConnectionApprovalPrefix(GameNetworkManager __instance, bool __runOriginal, ref object[] __state)
+        {
+            __state = new object[]{GameNetworkManager.Instance.gameHasStarted};
+            
+            if (!__runOriginal)
+                return;
+
+            // make the function believe we haven't started the lobby yet.
+            GameNetworkManager.Instance.gameHasStarted = false;
+        }
+    */  
 
         /// <summary>
         ///     Ensure that any incoming connections are properly accepted.
         /// </summary>
         [HarmonyPostfix]
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.ConnectionApproval))]
-        private static void FixConnectionApproval(GameNetworkManager __instance,
-            NetworkManager.ConnectionApprovalResponse response, bool __runOriginal)
+        [HarmonyPriority(0)]
+        private static void FixConnectionApprovalPostFix(GameNetworkManager __instance, bool __runOriginal, 
+            NetworkManager.ConnectionApprovalResponse response/*, ref object[] __state*/)
         {
-            // Only override refusals that are due to the current game state being set to "has already started".
-            if (!__runOriginal || response.Approved || response.Reason != "Game has already started!")
+            /*
+            // reset the started status.
+            GameNetworkManager.Instance.gameHasStarted = (bool)__state[0];
+            */
+            
+            if (!__runOriginal)
                 return;
-
-            if (__instance.gameHasStarted && __instance.currentLobby.HasValue && LobbyPatcher.IsOpen(__instance.currentLobby.Value))
+            
+            //if we're allowing late connections log it
+            if (__instance.gameHasStarted && response.Approved && __instance.currentLobby.HasValue && LobbyPatcher.IsOpen(__instance.currentLobby.Value))
             {
                 LobbyControl.Log.LogDebug("Approving incoming late connection.");
-                response.Reason = "";
-                response.Approved = true;
-            }else if (!LobbyControl.CanModifyLobby)
+            }
+            //if not give them a valid reason
+            else if (!LobbyControl.CanModifyLobby)
             {
+                LobbyControl.Log.LogDebug("Late connection refused ( ship was landed ).");
                 response.Reason = "Ship has already landed!";
-            }else if (!__instance.currentLobby.HasValue || !LobbyPatcher.IsOpen(__instance.currentLobby.Value))
+                response.Approved = false;
+            }
+            else if (!__instance.currentLobby.HasValue || !LobbyPatcher.IsOpen(__instance.currentLobby.Value))
             {
+                LobbyControl.Log.LogDebug("Late connection refused ( lobby was closed ).");
                 response.Reason = "Lobby has been closed!";
+                response.Approved = false;
             }
         }
 
@@ -138,17 +214,25 @@ namespace LobbyControl.Patches
                 Object.FindObjectOfType<QuickMenuManager>().inviteFriendsTextAlpha.alpha = 1f;
             }
         }
-        
-        /// <summary>
-        ///     Skip handling the new Connection if it comes from us and we are the Host.
-        ///     Should only happen if we're trying to reLoad the lobby
-        /// </summary>
+
         [HarmonyPrefix]
-        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnPlayerConnectedClientRpc))]
-        private static bool SkipLocalReconnect(StartOfRound __instance, ulong clientId)
+        [HarmonyPatch(typeof(StartOfRound),nameof(StartOfRound.OnClientConnect))]
+        [HarmonyPriority(Priority.High)]
+        private static bool PreventExtraClients(StartOfRound __instance, bool __runOriginal, ulong clientId)
         {
-            return !(__instance.IsServer && __instance.__rpc_exec_stage == NetworkBehaviour.__RpcExecStage.Client &&
-                     clientId == __instance.localPlayerController.playerClientId);
+            if (!__runOriginal)
+                return false;
+            
+            if (!__instance.IsServer)
+                return true;
+
+            if (__instance.connectedPlayersAmount < __instance.allPlayerObjects.Length - 1) 
+                return true;
+            
+            LobbyControl.Log.LogWarning($"Player with ID {clientId} attempted to join a full lobby!");
+            NetworkManager.Singleton.DisconnectClient(clientId);
+            return false;
+
         }
     }
 }
