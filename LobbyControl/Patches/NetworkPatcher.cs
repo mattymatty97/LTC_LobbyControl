@@ -169,6 +169,7 @@ namespace LobbyControl.Patches
                 return;
             
             LobbyControl.CanModifyLobby = true;
+            PendingClients.Clear();
         }
 
         /// <summary>
@@ -215,6 +216,8 @@ namespace LobbyControl.Patches
             }
         }
 
+        private static readonly HashSet<ulong> PendingClients = new HashSet<ulong>();
+
         [HarmonyPrefix]
         [HarmonyPatch(typeof(StartOfRound),nameof(StartOfRound.OnClientConnect))]
         [HarmonyPriority(Priority.High)]
@@ -226,13 +229,29 @@ namespace LobbyControl.Patches
             if (!__instance.IsServer)
                 return true;
 
-            if (__instance.connectedPlayersAmount < __instance.allPlayerObjects.Length - 1) 
+            if (__instance.connectedPlayersAmount + PendingClients.Count < __instance.allPlayerObjects.Length - 1)
+            {
+                PendingClients.Add(clientId);
                 return true;
-            
+            }
+
             LobbyControl.Log.LogWarning($"Player with ID {clientId} attempted to join a full lobby!");
             NetworkManager.Singleton.DisconnectClient(clientId);
             return false;
 
+        }        
+        
+        [HarmonyFinalizer]
+        [HarmonyPatch(typeof(StartOfRound),nameof(StartOfRound.OnPlayerConnectedClientRpc))]
+        private static void ForgetPendingClients(StartOfRound __instance, ulong clientId)
+        {
+            
+            if (!__instance.IsServer)
+                return;
+
+            if (__instance.__rpc_exec_stage == NetworkBehaviour.__RpcExecStage.Client &&
+                (NetworkManager.Singleton.IsClient || NetworkManager.Singleton.IsHost))
+                PendingClients.Remove(clientId);
         }
     }
 }

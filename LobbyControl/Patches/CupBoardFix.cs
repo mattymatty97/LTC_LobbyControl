@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Security.Policy;
 using HarmonyLib;
 using Unity.Netcode;
 using UnityEngine;
@@ -26,6 +25,10 @@ namespace LobbyControl.Patches
                 try
                 {
                     var pos = grabbable.transform.position;
+                    
+                    if (LobbyControl.PluginConfig.UnnamedPatch.Enabled.Value && grabbable.itemProperties.itemSpawnsOnGround)
+                        pos -= Vector3.up * LobbyControl.PluginConfig.UnnamedPatch.verticalOffest.Value;
+                    
                     GameObject closet = GameObject.Find("/Environment/HangarShip/StorageCloset");
                     PlaceableObjectsSurface[] storageShelves =
                         closet.GetComponentsInChildren<PlaceableObjectsSurface>();
@@ -35,7 +38,7 @@ namespace LobbyControl.Patches
                     Vector3? closest = null;
                     foreach (var shelf in storageShelves)
                     {
-                        if (!shelf.placeableBounds.bounds.Contains(pos))
+                        if (Vector3.Distance(pos, shelf.placeableBounds.bounds.ClosestPoint(pos)) > tolerance)
                             continue;
 
                         var hitPoint = shelf.GetComponent<Collider>().ClosestPoint(pos);
@@ -74,7 +77,9 @@ namespace LobbyControl.Patches
                         var yDelta = pos.y - hitPoint.y;
                         if (Math.Abs(xDelta) < tolerance && Math.Abs(zDelta) < tolerance && yDelta > 0)
                         {
-                            grabbable.itemProperties.itemSpawnsOnGround = false;
+                            grabbable.transform.position = pos;
+                            
+                            NoGravityObjects.Add(grabbable);
 
                             if (Math.Abs(xDelta) > 0)
                                 grabbable.transform.position += new Vector3(xDelta, 0, 0);
