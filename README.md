@@ -25,7 +25,7 @@ Patches:
   ( reload a previous/different savefile without having to quit the lobby )
 - ### ItemLimit
   - **removed** limit on amount of items that can be saved  
-  ( vanilla = 25 )
+  ( vanilla = 45 )
   - **removed** limit to amount of scrap that can be synchronized  
   ( vanilla = 250 )
 - ### Storage Cabinet
@@ -87,7 +87,7 @@ Differences to [CupboardFix](https://thunderstore.io/c/lethal-company/p/Rocksnot
 CupboardFix removes the gravity from all item types that are above the ground and never resets it,  
 this causes a lot of items to spawn floating both from the DropShip and inside the Factory.  
 This mod instead only affects the items specifically inside the Closet and above it,  
-additionally forces the parent of the objects inside back to the closet itself allowing you to move them together with the closet,  
+additionally snaps the items to the shelves and forces the parent to the closet itself allowing you to move them together with the closet,  
 as would happen if you had deposited the items manually inside 
 
 Installation
