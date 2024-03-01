@@ -17,6 +17,8 @@ namespace LobbyControl.Patches
 
         private static readonly Dictionary<ulong, int> ToRespawn = new Dictionary<ulong, int>();
         private static readonly Dictionary<ulong, int> ToDisconnect = new Dictionary<ulong, int>();
+
+        private static bool _isRespawning = false;
         
         [HarmonyPrefix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnPlayerDC))]
@@ -40,6 +42,18 @@ namespace LobbyControl.Patches
                 controller.DisablePlayerModel(controller.gameObject, true, true);
             }
         }
+        
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnClientDisconnectClientRpc))]
+        private static bool preventDc(StartOfRound __instance, int playerObjectNumber, ulong clientId)
+        {
+            if (!__instance.IsServer || !LobbyControl.PluginConfig.InvisiblePlayer.Enabled.Value)
+                return true;
+
+            ToDisconnect[clientId] = playerObjectNumber;
+
+            return !_isRespawning;
+        }
 
         [HarmonyPrefix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.unloadSceneForAllPlayers))]
@@ -50,7 +64,8 @@ namespace LobbyControl.Patches
             
             if (!__instance.IsServer || ToRespawn.Count == 0)
                 return;
-            
+
+            _isRespawning = true;
             List<ulong> ulongList = new List<ulong>();
             List<ulong> rpcList = new List<ulong>();
             for (int index = 0; index < __instance.allPlayerObjects.Length; ++index)
@@ -199,7 +214,8 @@ namespace LobbyControl.Patches
                 StartOfRoundEndSendClientRpc.Invoke(__instance, new object[]{bufferWriter, 475465488U, clientRpcParams, RpcDelivery.Reliable});
                 LobbyControl.Log.LogInfo($"Player {controller.playerUsername} has been removed and should be visible to {client.playerUsername}");
             }
-            
+
+            _isRespawning = false;
         }
         
         [HarmonyPostfix]
@@ -209,6 +225,7 @@ namespace LobbyControl.Patches
             if (!__instance.IsServer)
                 return;
             
+            _isRespawning = false;
             ToRespawn.Clear();
             ToDisconnect.Clear();
         }
@@ -220,6 +237,7 @@ namespace LobbyControl.Patches
             if (!__instance.IsServer)
                 return;
             
+            _isRespawning = false;
             ToRespawn.Clear();
             ToDisconnect.Clear();
         }
