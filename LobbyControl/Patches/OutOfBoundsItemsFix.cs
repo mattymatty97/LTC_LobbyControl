@@ -5,14 +5,14 @@ using UnityEngine;
 namespace LobbyControl.Patches
 {
     [HarmonyPatch]
-    internal class UnnamedPatch
+    internal class OutOfBoundsItemsFix
     {
         [HarmonyPrefix]
         [HarmonyPatch(typeof(NetworkBehaviour), nameof(NetworkBehaviour.OnNetworkSpawn))]
         [HarmonyPriority(Priority.First)]
         private static void ObjectCreation(NetworkBehaviour __instance)
         {
-            if (!LobbyControl.PluginConfig.UnnamedPatch.Enabled.Value)
+            if (!LobbyControl.PluginConfig.OutOfBounds.Enabled.Value)
                 return;
             
             if (!(__instance is GrabbableObject obj))
@@ -25,7 +25,7 @@ namespace LobbyControl.Patches
 
             var position = __instance.transform.position;
             if (obj.itemProperties.itemSpawnsOnGround)
-                position += Vector3.up * LobbyControl.PluginConfig.UnnamedPatch.verticalOffest.Value;
+                position += Vector3.up * LobbyControl.PluginConfig.OutOfBounds.VerticalOffset.Value;
             position = collider.ClosestPoint(position);
             __instance.transform.position = position;
         }
@@ -34,7 +34,7 @@ namespace LobbyControl.Patches
         [HarmonyPatch(typeof(RoundManager), nameof(RoundManager.DespawnPropsAtEndOfRound))]
         private static void ShipLeave(RoundManager __instance, bool despawnAllItems)
         {
-            if (!LobbyControl.PluginConfig.UnnamedPatch.Enabled.Value)
+            if (!LobbyControl.PluginConfig.OutOfBounds.Enabled.Value)
                 return;
             
             GrabbableObject[] objectsOfType = UnityEngine.Object.FindObjectsOfType<GrabbableObject>();
@@ -55,7 +55,7 @@ namespace LobbyControl.Patches
         [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.OnHitGround))]
         private static void AfterFall(GrabbableObject __instance)
         {
-            if (!LobbyControl.PluginConfig.UnnamedPatch.Enabled.Value)
+            if (!LobbyControl.PluginConfig.OutOfBounds.Enabled.Value)
                 return;
             
             Collider collider = StartOfRound.Instance.shipInnerRoomBounds;

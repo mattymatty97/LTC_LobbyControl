@@ -1,3 +1,15 @@
+## v2.2.4
+- Fixes to InvisibleMan to avoid crashes
+- Improvements to ItemClippingFix ( now all offsets are dynamically calculated based on the model affecting also modded items)
+- Fixes to Late Joining ( prevent a 5th player from connecting while the 4th is still being processed)
+- Added OutOfBounds patch to fix items glitching below the ship
+- Improved CupBoard fixes to now track each shelf separately and snap items to them
+- Added config entry to automatically re-open the lobby once in Orbit
+- Actually remove the scrap limits ( previously was setting them to intMax )
+
+## v2.2.3
+- Use the correct LethalAPI dependency
+
 ## v2.2.2
 - Added Config File
 

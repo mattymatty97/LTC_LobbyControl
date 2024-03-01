@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
 using BepInEx;
 using BepInEx.Configuration;
@@ -9,6 +11,7 @@ using LethalAPI.LibTerminal.Models;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UIElements.Collections;
+using Object = UnityEngine.Object;
 
 
 namespace LobbyControl
@@ -35,6 +38,7 @@ namespace LobbyControl
             Log = Logger;
             try
             {
+                
                 Log.LogInfo("Initializing Configs");
 
                 PluginConfig.Init(this);
@@ -51,6 +55,10 @@ namespace LobbyControl
                 Log.LogError("Exception while initializing: \n" + ex);
             }
         }
+        
+        
+        private static readonly MethodInfo BeginSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__beginSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
+        private static readonly MethodInfo EndSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__endSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
 
         internal static void ReloadShipUnlockables()
         {
@@ -237,10 +245,10 @@ namespace LobbyControl
                 //SteamLobby
                 SteamLobby.AutoLobby = config.Bind("SteamLobby","auto_lobby",false
                     ,"automatically reopen the lobby as soon as you reach orbit");
-                //Unnamed
-                UnnamedPatch.Enabled = config.Bind("Unnamed","enabled",true
+                //OutOfBounds
+                OutOfBounds.Enabled = config.Bind("OutOfBounds","enabled",true
                     ,"prevent items from falling below the ship");
-                UnnamedPatch.verticalOffest = config.Bind("Unnamed","vertical_offset",0.5f
+                OutOfBounds.VerticalOffset = config.Bind("OutOfBounds","vertical_offset",0.2f
                     ,"vertical offset to apply to objects on load");
             }
             
@@ -284,11 +292,65 @@ namespace LobbyControl
                 internal static ConfigEntry<bool> Enabled;
             }
             
-            internal static class UnnamedPatch
+            internal static class OutOfBounds
             {
                 internal static ConfigEntry<bool> Enabled;
-                internal static ConfigEntry<float> verticalOffest;
+                internal static ConfigEntry<float> VerticalOffset;
             }
+        }
+
+        public static IEnumerator LoadItemsCoroutine()
+        {
+            yield return new WaitForSeconds(2);
+            StartOfRound.Instance.LoadShipGrabbableItems();
+        }
+
+        public static void RefreshLobby()
+        {
+            var startOfRound = StartOfRound.Instance;
+            List<ulong> ulongList = new List<ulong>();
+            List<ulong> rpcList = new List<ulong>();
+            for (var index = 0; index < startOfRound.allPlayerObjects.Length; ++index)
+            {
+                var component = startOfRound.allPlayerObjects[index].GetComponent<NetworkObject>();
+                if (!component.IsOwnedByServer)
+                {
+                    ulongList.Add(component.OwnerClientId);
+                    rpcList.Add(component.OwnerClientId);
+                }
+                else if (index == 0)
+                    ulongList.Add(NetworkManager.Singleton.LocalClientId);
+                else
+                    ulongList.Add(999UL);
+            }
+            
+            ClientRpcParams clientRpcParams = new ClientRpcParams() {
+                Send = new ClientRpcSendParams() {
+                    TargetClientIds = rpcList,
+                },
+            };
+            
+            var groupCredits = Object.FindObjectOfType<Terminal>().groupCredits;
+            var profitQuota = TimeOfDay.Instance.profitQuota;
+            var quotaFulfilled = TimeOfDay.Instance.quotaFulfilled;
+            var timeUntilDeadline = (int)TimeOfDay.Instance.timeUntilDeadline;
+            var controller = StartOfRound.Instance.localPlayerController;
+
+            FastBufferWriter bufferWriter = (FastBufferWriter)BeginSendClientRpc.Invoke(startOfRound, new object[]{886676601U, clientRpcParams, RpcDelivery.Reliable});
+            BytePacker.WriteValueBitPacked(bufferWriter, controller.actualClientId);
+            BytePacker.WriteValueBitPacked(bufferWriter, startOfRound.connectedPlayersAmount - 1);
+            bufferWriter.WriteValueSafe<bool>(true);
+            bufferWriter.WriteValueSafe<ulong>(ulongList.ToArray());
+            BytePacker.WriteValueBitPacked(bufferWriter, startOfRound.ClientPlayerList[controller.actualClientId]);
+            BytePacker.WriteValueBitPacked(bufferWriter, groupCredits);
+            BytePacker.WriteValueBitPacked(bufferWriter, startOfRound.currentLevelID);
+            BytePacker.WriteValueBitPacked(bufferWriter, profitQuota);
+            BytePacker.WriteValueBitPacked(bufferWriter, timeUntilDeadline);
+            BytePacker.WriteValueBitPacked(bufferWriter, quotaFulfilled);
+            BytePacker.WriteValueBitPacked(bufferWriter,  startOfRound.randomMapSeed);
+            bufferWriter.WriteValueSafe<bool>(in startOfRound.isChallengeFile, new FastBufferWriter.ForPrimitives());
+            EndSendClientRpc.Invoke(startOfRound, new object[]{bufferWriter, 886676601U, clientRpcParams, RpcDelivery.Reliable});
+
         }
     }
 }

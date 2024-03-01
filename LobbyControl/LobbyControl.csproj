@@ -286,7 +286,7 @@
         <Compile Include="Patches\RadarPatch.cs"/>
         <Compile Include="Patches\SavePatches.cs" />
         <Compile Include="Patches\TransparentPlayerPatch.cs"/>
-        <Compile Include="Patches\UnnamedPatch.cs" />
+        <Compile Include="Patches\OutOfBoundsItemsFix.cs" />
         <Compile Include="Properties\AssemblyInfo.cs"/>
     </ItemGroup>
     <ItemGroup>

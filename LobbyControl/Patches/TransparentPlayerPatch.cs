@@ -121,9 +121,9 @@ namespace LobbyControl.Patches
             ToRespawn.Clear();
         }
         
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.EndOfGame))]
-        [HarmonyPriority(Priority.VeryLow)]
+        /*
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.PassTimeToNextDay))]
         private static void ClearDcPlayer(StartOfRound __instance, bool __runOriginal)
         {
             if (!LobbyControl.PluginConfig.InvisiblePlayer.Enabled.Value)
@@ -160,11 +160,62 @@ namespace LobbyControl.Patches
             }
             
             ToDisconnect.Clear();
+        }*/
+        
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.__rpc_handler_3083945322))]
+        private static void ClearDcPlayerForClient(StartOfRound __instance,
+            NetworkBehaviour target,
+            __RpcParams rpcParams)
+        {
+            if (!LobbyControl.PluginConfig.InvisiblePlayer.Enabled.Value)
+                return;
+
+            NetworkManager networkManager = target.NetworkManager;
+            if (networkManager == null || !networkManager.IsListening)
+                return;
+            
+            if (!__instance.IsServer || ToDisconnect.Count == 0)
+                return;
+            
+            ClientRpcParams clientRpcParams = new ClientRpcParams()
+            {
+                Send = new ClientRpcSendParams()
+                {
+                    TargetClientIds = new []{rpcParams.Server.Receive.SenderClientId}
+                }
+            };
+
+            var client =
+                __instance.allPlayerScripts[__instance.ClientPlayerList[rpcParams.Server.Receive.SenderClientId]];
+            
+            foreach (var player in new Dictionary<ulong,int>(ToDisconnect))
+            {
+                PlayerControllerB controller = __instance.allPlayerScripts[player.Value];
+                //__instance.OnClientDisconnectClientRpc(player.Value, player.Key, clientRpcParams);
+                FastBufferWriter bufferWriter = (FastBufferWriter)StartOfRoundBeginSendClientRpc.Invoke(__instance, new object[]{475465488U, clientRpcParams, RpcDelivery.Reliable});
+                BytePacker.WriteValueBitPacked(bufferWriter, player.Value);
+                BytePacker.WriteValueBitPacked(bufferWriter, player.Key);
+                StartOfRoundEndSendClientRpc.Invoke(__instance, new object[]{bufferWriter, 475465488U, clientRpcParams, RpcDelivery.Reliable});
+                LobbyControl.Log.LogInfo($"Player {controller.playerUsername} has been removed and should be visible to {client.playerUsername}");
+            }
+            
         }
         
         [HarmonyPostfix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.Awake))]
         private static void ClearOnBoot(StartOfRound __instance)
+        {
+            if (!__instance.IsServer)
+                return;
+            
+            ToRespawn.Clear();
+            ToDisconnect.Clear();
+        }
+        
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.StartGame))]
+        private static void ClearOnLand(StartOfRound __instance)
         {
             if (!__instance.IsServer)
                 return;
