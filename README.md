@@ -97,3 +97,8 @@ Installation
 - Unzip this mod into your `Lethal Company/BepInEx/plugins` folder
 
 Or use the mod manager to handle the installing for you.
+
+Icon by
+-----------
+@pedro9006 on discord
+<@464801863741734913>

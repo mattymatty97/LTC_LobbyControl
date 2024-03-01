@@ -83,7 +83,7 @@ namespace LobbyControl.Patches
                 response.Reason = "Ship has already landed!";
                 response.Approved = false;
             }
-            else if (!__instance.currentLobby.HasValue || !LobbyPatcher.IsOpen(__instance.currentLobby.Value))
+            else if (!__instance.disableSteam && (!__instance.currentLobby.HasValue || !LobbyPatcher.IsOpen(__instance.currentLobby.Value)))
             {
                 LobbyControl.Log.LogDebug("Late connection refused ( lobby was closed ).");
                 response.Reason = "Lobby has been closed!";
