@@ -34,6 +34,8 @@ namespace LobbyControl
         public static bool CanSave = true;
         public static bool AutoSaveEnabled = true;
 
+        public static bool Enabled = true;
+
         private TerminalModRegistry _commands;
 
         private static readonly string[] IncompatibleGUIDs = new string[]
@@ -42,6 +44,16 @@ namespace LobbyControl
             "twig.latecompany",
             "com.potatoepet.AdvancedCompany"
         };
+
+        private void Awake()
+        {
+            Log.LogInfo("Initializing Configs");
+
+            PluginConfig.Init(this);
+
+            _commands = TerminalRegistry.CreateTerminalRegistry();
+            _commands.RegisterFrom<LobbyCommands>();
+        }
 
         private void Start()
         {
@@ -56,18 +68,14 @@ namespace LobbyControl
                         Log.LogWarning($"{mod.Metadata.Name} is incompatible!");   
                     }
                     Log.LogError($"{incompatibleMods.Length} incompatible mods found! Disabling!");
+                    Enabled = false;
                 }
                 else
                 {
-                    Log.LogInfo("Initializing Configs");
-
-                    PluginConfig.Init(this);
-
+                    Log.LogInfo("Patching Methods");
                     var harmony = new Harmony(GUID);
                     harmony.PatchAll(Assembly.GetExecutingAssembly());
-
-                    _commands = TerminalRegistry.CreateTerminalRegistry();
-                    _commands.RegisterFrom<LobbyCommands>();
+                    
                     Log.LogInfo(NAME + " v" + VERSION + " Loaded!");
                 }
             }
