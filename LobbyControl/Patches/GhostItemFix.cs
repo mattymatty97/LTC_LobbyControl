@@ -17,16 +17,6 @@ namespace LobbyControl.Patches
             
             if (StartOfRound.Instance.IsServer && __exception is IndexOutOfRangeException)
             {
-                
-                if (grabbedObject.TryGet(out var networkObject))
-                {
-                    networkObject.GetComponentInChildren<GrabbableObject>().heldByPlayerOnServer = false;
-                    networkObject.RemoveOwnership();
-                }
-
-                if (!LobbyControl.PluginConfig.GhostItems.ForceDrop.Value)
-                    return __exception;
-                
                 //if this did generate a ghost item force the attempting player to drop all held items :smirk:
                 __instance.DropAllHeldItemsServerRpc();
                 HUDManager.Instance.AddTextToChatOnServer($"{__instance.playerUsername} was forced to drop all Items!!");

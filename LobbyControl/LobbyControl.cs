@@ -250,8 +250,6 @@ namespace LobbyControl
                 //GhostItems
                 GhostItems.Enabled = config.Bind("GhostItems","enabled",true
                     ,"prevent the creation of non-grabbable items in case of inventory desync");
-                GhostItems.ForceDrop = config.Bind("GhostItems","forced_drop",true
-                    ,"force the player generating the ghost item to drop all his inventory ( this will re-sync the inventory and solve the issue unless it is caused by a mod)");
                 //ItemClipping
                 ItemClipping.Enabled = config.Bind("ItemClipping","enabled",true
                     ,"fix rotation and height of various items when on the Ground");
@@ -294,7 +292,6 @@ namespace LobbyControl
             internal static class GhostItems
             {
                 internal static ConfigEntry<bool> Enabled;
-                internal static ConfigEntry<bool> ForceDrop;
             }
             
             internal static class ItemClipping
