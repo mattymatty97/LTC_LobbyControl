@@ -13,7 +13,7 @@ namespace LobbyControl.Patches
         {
             {
                 "Flashlight[6]",
-                new List<float>(3) { 270f, 0f, 90f }
+                new List<float>(3) { 90f, 0f, 90f }
             },
             {
                 "Jetpack[13]",
@@ -29,7 +29,7 @@ namespace LobbyControl.Patches
             },
             {
                 "Pro-flashlight[1]",
-                new List<float>(3) { 0f, 0f, 90f }
+                new List<float>(3) { 90f, 0f, 90f }
             },
             {
                 "Shovel[7]",
