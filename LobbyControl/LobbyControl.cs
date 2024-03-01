@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using BepInEx;
+using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
@@ -12,6 +14,7 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UIElements.Collections;
 using Object = UnityEngine.Object;
+using PluginInfo = BepInEx.PluginInfo;
 
 
 namespace LobbyControl
@@ -33,22 +36,40 @@ namespace LobbyControl
 
         private TerminalModRegistry _commands;
 
-        private void Awake()
+        private static readonly string[] IncompatibleGUIDs = new string[]
+        {
+            "com.github.tinyhoot.ShipLobby",
+            "twig.latecompany",
+            "com.potatoepet.AdvancedCompany"
+        };
+
+        private void Start()
         {
             Log = Logger;
             try
             {
-                
-                Log.LogInfo("Initializing Configs");
+                PluginInfo[] incompatibleMods = Chainloader.PluginInfos.Values.Where(p => IncompatibleGUIDs.Contains(p.Metadata.GUID)).ToArray();
+                if (incompatibleMods.Length > 0)
+                {                    
+                    foreach (var mod in incompatibleMods)
+                    {
+                        Log.LogWarning($"{mod.Metadata.Name} is incompatible!");   
+                    }
+                    Log.LogError($"{incompatibleMods.Length} incompatible mods found! Disabling!");
+                }
+                else
+                {
+                    Log.LogInfo("Initializing Configs");
 
-                PluginConfig.Init(this);
-                
-                var harmony = new Harmony(GUID);
-                harmony.PatchAll(Assembly.GetExecutingAssembly());
+                    PluginConfig.Init(this);
 
-                _commands = TerminalRegistry.CreateTerminalRegistry();
-                _commands.RegisterFrom<LobbyCommands>();
-                Log.LogInfo(NAME + " v" + VERSION + " Loaded!");
+                    var harmony = new Harmony(GUID);
+                    harmony.PatchAll(Assembly.GetExecutingAssembly());
+
+                    _commands = TerminalRegistry.CreateTerminalRegistry();
+                    _commands.RegisterFrom<LobbyCommands>();
+                    Log.LogInfo(NAME + " v" + VERSION + " Loaded!");
+                }
             }
             catch (Exception ex)
             {

@@ -32,14 +32,20 @@ Patches:
   - **fix items inside of Storage Cabinet falling to the ground on load**
   - **fix items on top of Storage Cabinet falling to the ground on load**
 - ### ItemClippingFix
-  - **fix items clipping into the ground while dropped**
+  - **fix rotation of some items while dropped**
+  - **prevent items from clipping into the ground**
 - ### RadarFixes
   - **fix orphaned radar icons from deleted scrap**  
   ( scarp sold will appear on the radar in all the maps )
   - **fix items from a newly created lobby being visible on the radar**
-- ### InvisibleManFix ( Experimental )
+- ### InvisibleManFix
   - **fix for late joining player being invisible if the previous owner of the body disconnected while dead**
-
+- ### GhostItemFix
+  - prevent clients with **extra inventory** from generating unpickable items
+- ### OutOfBounds Patch
+  - prevent items from falling **below of the ship**
+- ### Others:
+  - Prevent host crashes when an extra player tries to join when the lobby is already full but the last player has not finished joining 
 
 Terminal Command:
 -----------------
@@ -67,8 +73,9 @@ and instead of always reopening the lobby it allows the host to decide if and wh
 
 Differences to [ItemClippingFix](https://thunderstore.io/c/lethal-company/p/ViViKo/ItemClippingFix/)
 ------------------------
-This mod uses the same values from ItemClippingFix
-expanding on it by fixing also the rotation of Objects in a newly hosted game
+This mod uses the same values from ItemClippingFix but additionally:
+- fixes the rotation of Objects in a newly hosted game  
+- fixes items clipping into the ground ( included modded ones )
 
 Differences to [MoreItems](https://thunderstore.io/c/lethal-company/p/Drakorle/MoreItems/)
 ------------------------
