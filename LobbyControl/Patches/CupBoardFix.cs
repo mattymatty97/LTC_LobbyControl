@@ -25,10 +25,10 @@ namespace LobbyControl.Patches
                 try
                 {
                     var pos = grabbable.transform.position;
-                    
-                    if (LobbyControl.PluginConfig.UnnamedPatch.Enabled.Value && grabbable.itemProperties.itemSpawnsOnGround)
-                        pos -= Vector3.up * LobbyControl.PluginConfig.UnnamedPatch.verticalOffest.Value;
-                    
+
+                    if (LobbyControl.PluginConfig.OutOfBounds.Enabled.Value && grabbable.itemProperties.itemSpawnsOnGround)
+                        pos -= Vector3.up * LobbyControl.PluginConfig.OutOfBounds.VerticalOffset.Value;
+
                     GameObject closet = GameObject.Find("/Environment/HangarShip/StorageCloset");
                     PlaceableObjectsSurface[] storageShelves =
                         closet.GetComponentsInChildren<PlaceableObjectsSurface>();
@@ -36,19 +36,35 @@ namespace LobbyControl.Patches
                     float distance = float.MaxValue;
                     PlaceableObjectsSurface found = null;
                     Vector3? closest = null;
+
+                    Bounds? placeableArea = null;
                     foreach (var shelf in storageShelves)
                     {
-                        if (Vector3.Distance(pos, shelf.placeableBounds.bounds.ClosestPoint(pos)) > tolerance)
-                            continue;
+                        if (!placeableArea.HasValue)
+                            placeableArea = shelf.placeableBounds.bounds;
+                        else
+                            placeableArea.Value.Encapsulate(shelf.placeableBounds.bounds);
+                    }
 
-                        var hitPoint = shelf.GetComponent<Collider>().ClosestPoint(pos);
-                        var tmp = pos.y - hitPoint.y;
-                        if (tmp >= 0 && tmp < distance)
+                    if (placeableArea.HasValue && placeableArea.Value.Contains(pos)){
+                        foreach (var shelf in storageShelves)
                         {
-                            found = shelf;
-                            distance = tmp;
-                            closest = hitPoint;
+                            var hitPoint = shelf.GetComponent<Collider>().ClosestPoint(pos);
+                            var tmp = pos.y - hitPoint.y;
+                            LobbyControl.Log.LogDebug(
+                                $"{grabbable.itemProperties.itemName}({grabbable.gameObject.GetInstanceID()}) - Shelve is {tmp} away!");
+                            if (tmp >= 0 && tmp < distance)
+                            {
+                                found = shelf;
+                                distance = tmp;
+                                closest = hitPoint;
+                            }
                         }
+                        
+                        LobbyControl.Log.LogDebug(
+                            $"{grabbable.itemProperties.itemName}({grabbable.gameObject.GetInstanceID()}) - Chosen Shelve is {distance} away!");
+                        LobbyControl.Log.LogDebug(
+                            $"{grabbable.itemProperties.itemName}({grabbable.gameObject.GetInstanceID()}) - With hitpoint at {closest}!");
                     }
 
                     if (found != null && closest.HasValue)
@@ -77,6 +93,7 @@ namespace LobbyControl.Patches
                         var yDelta = pos.y - hitPoint.y;
                         if (Math.Abs(xDelta) < tolerance && Math.Abs(zDelta) < tolerance && yDelta > 0)
                         {
+                            LobbyControl.Log.LogDebug($"{grabbable.itemProperties.itemName}({grabbable.gameObject.GetInstanceID()}) - Was above the Cupboard!");
                             grabbable.transform.position = pos;
                             
                             NoGravityObjects.Add(grabbable);
@@ -134,5 +151,6 @@ namespace LobbyControl.Patches
                     Object.Destroy(light.gameObject);
             }
         }
+        
     }
 }

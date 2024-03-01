@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Reflection;
 using System.Text;
 using BepInEx;
 using LethalAPI.LibTerminal.Attributes;
 using LethalAPI.LibTerminal.Models.Enums;
 using LobbyControl.Patches;
-using Unity.Netcode;
 using UnityEngine;
 using Object = UnityEngine.Object;
 // ReSharper disable MemberCanBePrivate.Global
@@ -17,10 +13,6 @@ namespace LobbyControl
 {
     public class LobbyCommands
     {
-        
-        private static readonly MethodInfo BeginSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__beginSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
-        private static readonly MethodInfo EndSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__endSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
-        
         private const string DefaultText = @"
 - status        : prints the current lobby status
 
@@ -376,18 +368,18 @@ Extra:
                             var startOfRound = StartOfRound.Instance;
                             var terminal = Object.FindObjectOfType<Terminal>();
                             //remove all items
-                            startOfRound.ResetShipFurniture(onlyClearBoughtFurniture: true);
+                            startOfRound.ResetShipFurniture();
                             startOfRound.ResetPooledObjects(true);
                             //try reload the save file
                             startOfRound.SetTimeAndPlanetToSavedSettings();
                             LobbyControl.ReloadShipUnlockables();
-                            startOfRound.StartCoroutine(LoadItemsCoroutine());
+                            startOfRound.StartCoroutine(LobbyControl.LoadItemsCoroutine());
                             terminal.Start();
                             //sync the new values
                             startOfRound.SetMapScreenInfoToCurrentLevel();
                             if (startOfRound.connectedPlayersAmount > 1)
                             {
-                                RefreshLobby();
+                                LobbyControl.RefreshLobby();
                                 startOfRound.SyncShipUnlockablesServerRpc();
                                 startOfRound.SyncSuitsServerRpc();
                             }
@@ -479,60 +471,5 @@ Extra:
                 return false;
             }
         }
-
-        private static IEnumerator LoadItemsCoroutine()
-        {
-            yield return new WaitForSeconds(2);
-            StartOfRound.Instance.LoadShipGrabbableItems();
-        }
-
-        private static void RefreshLobby()
-        {
-            var startOfRound = StartOfRound.Instance;
-            List<ulong> ulongList = new List<ulong>();
-            List<ulong> rpcList = new List<ulong>();
-            for (var index = 0; index < startOfRound.allPlayerObjects.Length; ++index)
-            {
-                var component = startOfRound.allPlayerObjects[index].GetComponent<NetworkObject>();
-                if (!component.IsOwnedByServer)
-                {
-                    ulongList.Add(component.OwnerClientId);
-                    rpcList.Add(component.OwnerClientId);
-                }
-                else if (index == 0)
-                    ulongList.Add(NetworkManager.Singleton.LocalClientId);
-                else
-                    ulongList.Add(999UL);
-            }
-            
-            ClientRpcParams clientRpcParams = new ClientRpcParams() {
-                Send = new ClientRpcSendParams() {
-                    TargetClientIds = rpcList,
-                },
-            };
-            
-            var groupCredits = Object.FindObjectOfType<Terminal>().groupCredits;
-            var profitQuota = TimeOfDay.Instance.profitQuota;
-            var quotaFulfilled = TimeOfDay.Instance.quotaFulfilled;
-            var timeUntilDeadline = (int)TimeOfDay.Instance.timeUntilDeadline;
-            var controller = StartOfRound.Instance.localPlayerController;
-
-            FastBufferWriter bufferWriter = (FastBufferWriter)BeginSendClientRpc.Invoke(startOfRound, new object[]{886676601U, clientRpcParams, RpcDelivery.Reliable});
-            BytePacker.WriteValueBitPacked(bufferWriter, controller.actualClientId);
-            BytePacker.WriteValueBitPacked(bufferWriter, startOfRound.connectedPlayersAmount - 1);
-            bufferWriter.WriteValueSafe<bool>(true);
-            bufferWriter.WriteValueSafe<ulong>(ulongList.ToArray());
-            BytePacker.WriteValueBitPacked(bufferWriter, startOfRound.ClientPlayerList[controller.actualClientId]);
-            BytePacker.WriteValueBitPacked(bufferWriter, groupCredits);
-            BytePacker.WriteValueBitPacked(bufferWriter, startOfRound.currentLevelID);
-            BytePacker.WriteValueBitPacked(bufferWriter, profitQuota);
-            BytePacker.WriteValueBitPacked(bufferWriter, timeUntilDeadline);
-            BytePacker.WriteValueBitPacked(bufferWriter, quotaFulfilled);
-            BytePacker.WriteValueBitPacked(bufferWriter,  startOfRound.randomMapSeed);
-            bufferWriter.WriteValueSafe<bool>(in startOfRound.isChallengeFile, new FastBufferWriter.ForPrimitives());
-            EndSendClientRpc.Invoke(startOfRound, new object[]{bufferWriter, 886676601U, clientRpcParams, RpcDelivery.Reliable});
-
-        }
-
     }
 }
