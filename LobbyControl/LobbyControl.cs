@@ -28,7 +28,7 @@ namespace LobbyControl
     {
         public const string GUID = "mattymatty.LobbyControl";
         public const string NAME = "LobbyControl";
-        public const string VERSION = "2.2.5";
+        public const string VERSION = "2.2.6";
 
         internal static ManualLogSource Log;
 
