@@ -47,6 +47,8 @@ namespace LobbyControl
 
         private void Awake()
         {
+            Log = Logger;
+            
             Log.LogInfo("Initializing Configs");
 
             PluginConfig.Init(this);
@@ -57,7 +59,6 @@ namespace LobbyControl
 
         private void Start()
         {
-            Log = Logger;
             try
             {
                 PluginInfo[] incompatibleMods = Chainloader.PluginInfos.Values.Where(p => IncompatibleGUIDs.Contains(p.Metadata.GUID)).ToArray();
