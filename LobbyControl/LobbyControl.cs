@@ -257,7 +257,7 @@ namespace LobbyControl
                 Radar.RemoveOnShip = config.Bind("Radar","ship_loot",true
                     ,"remove orphan radar icons from scrap on the ship in a recently created game");
                 //GhostItems
-                GhostItems.Enabled = config.Bind("GhostItems","enabled",true
+                GhostItems.Enabled = config.Bind("GhostItems","enabled",false
                     ,"prevent the creation of non-grabbable items in case of inventory desync");
                 //ItemClipping
                 ItemClipping.Enabled = config.Bind("ItemClipping","enabled",true
