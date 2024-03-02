@@ -38,9 +38,6 @@ Extra:
         [AllowedCaller(AllowedCaller.Host)]
         public TerminalNode Lobby()
         {
-            if (!LobbyControl.Enabled)
-                return null;
-            
             var node = ScriptableObject.CreateInstance<TerminalNode>();
             node.displayText = "Invalid command:" + DefaultText;
             node.clearPreviousText = true;
@@ -53,9 +50,6 @@ Extra:
         [AllowedCaller(AllowedCaller.Host)]
         public TerminalNode Lobby([RemainingText] string text)
         {
-            if (!LobbyControl.Enabled)
-                return null;
-            
             var node = ScriptableObject.CreateInstance<TerminalNode>();
             try
             {

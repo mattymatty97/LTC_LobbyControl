@@ -21,11 +21,14 @@ namespace LobbyControl
 {
     [BepInPlugin(GUID, NAME, VERSION)]
     [BepInDependency("LethalAPI.Terminal","1.0.0")]
+    [BepInDependency("com.github.tinyhoot.ShipLobby", Flags:BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("twig.latecompany", Flags:BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("com.potatoepet.AdvancedCompany", Flags:BepInDependency.DependencyFlags.SoftDependency)]
     internal class LobbyControl : BaseUnityPlugin
     {
         public const string GUID = "mattymatty.LobbyControl";
         public const string NAME = "LobbyControl";
-        public const string VERSION = "2.2.4";
+        public const string VERSION = "2.2.5";
 
         internal static ManualLogSource Log;
 
@@ -33,8 +36,6 @@ namespace LobbyControl
 
         public static bool CanSave = true;
         public static bool AutoSaveEnabled = true;
-
-        public static bool Enabled = true;
 
         private TerminalModRegistry _commands;
 
@@ -48,17 +49,6 @@ namespace LobbyControl
         private void Awake()
         {
             Log = Logger;
-            
-            Log.LogInfo("Initializing Configs");
-
-            PluginConfig.Init(this);
-
-            _commands = TerminalRegistry.CreateTerminalRegistry();
-            _commands.RegisterFrom<LobbyCommands>();
-        }
-
-        private void Start()
-        {
             try
             {
                 PluginInfo[] incompatibleMods = Chainloader.PluginInfos.Values.Where(p => IncompatibleGUIDs.Contains(p.Metadata.GUID)).ToArray();
@@ -69,10 +59,17 @@ namespace LobbyControl
                         Log.LogWarning($"{mod.Metadata.Name} is incompatible!");   
                     }
                     Log.LogError($"{incompatibleMods.Length} incompatible mods found! Disabling!");
-                    Enabled = false;
                 }
                 else
                 {
+                    Log.LogInfo("Initializing Configs");
+
+                    PluginConfig.Init(this);
+
+                    Log.LogInfo("Registering Commands");
+                    _commands = TerminalRegistry.CreateTerminalRegistry();
+                    _commands.RegisterFrom<LobbyCommands>();
+                    
                     Log.LogInfo("Patching Methods");
                     var harmony = new Harmony(GUID);
                     harmony.PatchAll(Assembly.GetExecutingAssembly());

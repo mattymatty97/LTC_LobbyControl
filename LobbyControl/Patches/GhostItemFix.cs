@@ -12,7 +12,7 @@ namespace LobbyControl.Patches
         [HarmonyPatch(typeof(PlayerControllerB),nameof(PlayerControllerB.GrabObjectClientRpc))]
         private static Exception CatchGhostItemCreation(Exception __exception, PlayerControllerB __instance, NetworkObjectReference grabbedObject)
         {
-            if (true || !LobbyControl.PluginConfig.GhostItems.Enabled.Value)
+            if (!LobbyControl.PluginConfig.GhostItems.Enabled.Value)
                 return __exception;
             
             if (StartOfRound.Instance.IsServer && __exception != null)
