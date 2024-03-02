@@ -218,25 +218,32 @@ namespace LobbyControl.Patches
             {
                 if (!LobbyControl.PluginConfig.ItemClipping.Enabled.Value)
                     return true;
-
-                if (Physics.Raycast(gameplayCamera.position, gameplayCamera.forward, out var val, 7f,
-                        StartOfRound.Instance.collidersAndRoomMask, (QueryTriggerInteraction)1))
+                try
                 {
-                    var bounds = __instance.placeableBounds.bounds;
-
-                    if (bounds.Contains(val.point))
+                    if (Physics.Raycast(gameplayCamera.position, gameplayCamera.forward, out var val, 7f,
+                            StartOfRound.Instance.collidersAndRoomMask, (QueryTriggerInteraction)1))
                     {
-                        __result = FixPlacement(val.point, __instance.transform, heldObject);
+                        var bounds = __instance.placeableBounds.bounds;
+
+                        if (bounds.Contains(val.point))
+                        {
+                            __result = FixPlacement(val.point, __instance.transform, heldObject);
+                            return false;
+                        }
+
+                        var hitPoint = __instance.placeableBounds.ClosestPoint(val.point);
+                        __result = FixPlacement(hitPoint, __instance.transform, heldObject);
                         return false;
                     }
 
-                    var hitPoint = __instance.placeableBounds.ClosestPoint(val.point);
-                    __result = FixPlacement(hitPoint, __instance.transform, heldObject);
+                    __result = Vector3.zero;
                     return false;
                 }
-
-                __result = Vector3.zero;
-                return false;
+                catch (Exception ex)
+                {
+                    LobbyControl.Log.LogError($"Exception while finding the Cupboard Placement {ex}");
+                    return true;
+                }
             }
         }
 
@@ -341,12 +348,19 @@ namespace LobbyControl.Patches
                 if (!ObjectsToUpdate.Remove(__instance))
                     return;
 
-                __instance.transform.rotation = Quaternion.Euler(
-                    __instance.itemProperties.restingRotation.x,
-                    __instance.floorYRot == -1
-                        ? __instance.transform.eulerAngles.y
-                        : __instance.floorYRot + __instance.itemProperties.floorYOffset + 90f,
-                    __instance.itemProperties.restingRotation.z);
+                try
+                {
+                    __instance.transform.rotation = Quaternion.Euler(
+                        __instance.itemProperties.restingRotation.x,
+                        __instance.floorYRot == -1
+                            ? __instance.transform.eulerAngles.y
+                            : __instance.floorYRot + __instance.itemProperties.floorYOffset + 90f,
+                        __instance.itemProperties.restingRotation.z);
+                }
+                catch (Exception ex)
+                {
+                    LobbyControl.Log.LogError($"Exception while setting rotation :{ex}");
+                }
             }
         }
     }

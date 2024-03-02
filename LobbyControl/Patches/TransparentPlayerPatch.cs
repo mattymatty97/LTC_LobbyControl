@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
 using GameNetcodeStuff;
 using HarmonyLib;
@@ -65,74 +66,88 @@ namespace LobbyControl.Patches
             if (!__instance.IsServer || ToRespawn.Count == 0)
                 return;
 
-            _isRespawning = true;
-            List<ulong> ulongList = new List<ulong>();
-            List<ulong> rpcList = new List<ulong>();
-            for (int index = 0; index < __instance.allPlayerObjects.Length; ++index)
+            try
             {
-                NetworkObject component = __instance.allPlayerObjects[index].GetComponent<NetworkObject>();
-                if (ToRespawn.TryGetValue(component.OwnerClientId, out var playerObjectIndex) && playerObjectIndex != -1)
-                    ulongList.Add(component.OwnerClientId);
-                else if (!component.IsOwnedByServer)
+                _isRespawning = true;
+                List<ulong> ulongList = new List<ulong>();
+                List<ulong> rpcList = new List<ulong>();
+                for (int index = 0; index < __instance.allPlayerObjects.Length; ++index)
                 {
-                    ulongList.Add(component.OwnerClientId);
-                    rpcList.Add(component.OwnerClientId);
+                    NetworkObject component = __instance.allPlayerObjects[index].GetComponent<NetworkObject>();
+                    if (ToRespawn.TryGetValue(component.OwnerClientId, out var playerObjectIndex) &&
+                        playerObjectIndex != -1)
+                        ulongList.Add(component.OwnerClientId);
+                    else if (!component.IsOwnedByServer)
+                    {
+                        ulongList.Add(component.OwnerClientId);
+                        rpcList.Add(component.OwnerClientId);
+                    }
+                    else if (index == 0)
+                        ulongList.Add(NetworkManager.Singleton.LocalClientId);
+                    else
+                        ulongList.Add(999UL);
                 }
-                else if (index == 0)
-                    ulongList.Add(NetworkManager.Singleton.LocalClientId);
-                else
-                    ulongList.Add(999UL);
+
+                ClientRpcParams clientRpcParams = new ClientRpcParams()
+                {
+                    Send = new ClientRpcSendParams()
+                    {
+                        TargetClientIds = rpcList,
+                    },
+                };
+
+                var serverMoneyAmount = UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits;
+                var profitQuota = TimeOfDay.Instance.profitQuota;
+                var quotaFulfilled = TimeOfDay.Instance.quotaFulfilled;
+                var timeUntilDeadline = (int)TimeOfDay.Instance.timeUntilDeadline;
+                var levelID = __instance.currentLevelID;
+                var connectedPlayers = __instance.connectedPlayersAmount;
+                var randomSeed = __instance.randomMapSeed;
+                var isChallenge = __instance.isChallengeFile;
+
+                int count = 0;
+                foreach (var dcPlayer in new Dictionary<ulong, int>(ToRespawn))
+                {
+                    PlayerControllerB controller = __instance.allPlayerScripts[dcPlayer.Value];
+                    //client Join
+                    FastBufferWriter bufferWriter = (FastBufferWriter)StartOfRoundBeginSendClientRpc.Invoke(__instance,
+                        new object[] { 886676601U, clientRpcParams, RpcDelivery.Reliable });
+                    BytePacker.WriteValueBitPacked(bufferWriter, dcPlayer.Key);
+                    BytePacker.WriteValueBitPacked(bufferWriter, connectedPlayers + count);
+                    bufferWriter.WriteValueSafe<bool>(true);
+                    bufferWriter.WriteValueSafe<ulong>(ulongList.ToArray());
+                    BytePacker.WriteValueBitPacked(bufferWriter, dcPlayer.Value);
+                    BytePacker.WriteValueBitPacked(bufferWriter, serverMoneyAmount);
+                    BytePacker.WriteValueBitPacked(bufferWriter, levelID);
+                    BytePacker.WriteValueBitPacked(bufferWriter, profitQuota);
+                    BytePacker.WriteValueBitPacked(bufferWriter, timeUntilDeadline);
+                    BytePacker.WriteValueBitPacked(bufferWriter, quotaFulfilled);
+                    BytePacker.WriteValueBitPacked(bufferWriter, randomSeed);
+                    bufferWriter.WriteValueSafe<bool>(in isChallenge);
+                    StartOfRoundEndSendClientRpc.Invoke(__instance,
+                        new object[] { bufferWriter, 886676601U, clientRpcParams, RpcDelivery.Reliable });
+                    LobbyControl.Log.LogInfo($"Player {controller.playerUsername} has been reconnected by host");
+
+                    //Client Kill
+                    bufferWriter = (FastBufferWriter)PlayerControllerBBeginSendClientRpc.Invoke(controller,
+                        new object[] { 168339603U, clientRpcParams, RpcDelivery.Reliable });
+                    BytePacker.WriteValueBitPacked(bufferWriter, dcPlayer.Value);
+                    bufferWriter.WriteValueSafe<bool>(false);
+                    bufferWriter.WriteValueSafe(Vector3.zero);
+                    BytePacker.WriteValueBitPacked(bufferWriter, (int)CauseOfDeath.Kicking);
+                    BytePacker.WriteValueBitPacked(bufferWriter, 0);
+                    PlayerControllerBEndSendClientRpc.Invoke(controller,
+                        new object[] { bufferWriter, 168339603U, clientRpcParams, RpcDelivery.Reliable });
+                    LobbyControl.Log.LogInfo($"Player {controller.playerUsername} has been killed by host");
+
+                    ToDisconnect[dcPlayer.Key] = dcPlayer.Value;
+                }
             }
-            
-            ClientRpcParams clientRpcParams = new ClientRpcParams() {
-                Send = new ClientRpcSendParams() {
-                    TargetClientIds = rpcList,
-                },
-            };
-            
-            var serverMoneyAmount = UnityEngine.Object.FindObjectOfType<Terminal>().groupCredits;
-            var profitQuota = TimeOfDay.Instance.profitQuota;
-            var quotaFulfilled = TimeOfDay.Instance.quotaFulfilled;
-            var timeUntilDeadline = (int) TimeOfDay.Instance.timeUntilDeadline;
-            var levelID = __instance.currentLevelID;
-            var connectedPlayers = __instance.connectedPlayersAmount;
-            var randomSeed = __instance.randomMapSeed;
-            var isChallenge = __instance.isChallengeFile;
-            
-            int count = 0;
-            foreach (var dcPlayer in new Dictionary<ulong,int>(ToRespawn))
+            catch (Exception ex)
             {
-                PlayerControllerB controller = __instance.allPlayerScripts[dcPlayer.Value];
-                //client Join
-                FastBufferWriter bufferWriter = (FastBufferWriter)StartOfRoundBeginSendClientRpc.Invoke(__instance, new object[]{886676601U, clientRpcParams, RpcDelivery.Reliable});
-                BytePacker.WriteValueBitPacked(bufferWriter, dcPlayer.Key);
-                BytePacker.WriteValueBitPacked(bufferWriter, connectedPlayers + count);
-                bufferWriter.WriteValueSafe<bool>(true);
-                bufferWriter.WriteValueSafe<ulong>(ulongList.ToArray());
-                BytePacker.WriteValueBitPacked(bufferWriter, dcPlayer.Value);
-                BytePacker.WriteValueBitPacked(bufferWriter, serverMoneyAmount);
-                BytePacker.WriteValueBitPacked(bufferWriter, levelID);
-                BytePacker.WriteValueBitPacked(bufferWriter, profitQuota);
-                BytePacker.WriteValueBitPacked(bufferWriter, timeUntilDeadline);
-                BytePacker.WriteValueBitPacked(bufferWriter, quotaFulfilled);
-                BytePacker.WriteValueBitPacked(bufferWriter, randomSeed);
-                bufferWriter.WriteValueSafe<bool>(in isChallenge);
-                StartOfRoundEndSendClientRpc.Invoke(__instance, new object[]{bufferWriter, 886676601U, clientRpcParams, RpcDelivery.Reliable});
-                LobbyControl.Log.LogInfo($"Player {controller.playerUsername} has been reconnected by host");
-
-                //Client Kill
-                bufferWriter = (FastBufferWriter)PlayerControllerBBeginSendClientRpc.Invoke(controller, new object[]{168339603U, clientRpcParams, RpcDelivery.Reliable});
-                BytePacker.WriteValueBitPacked(bufferWriter, dcPlayer.Value);
-                bufferWriter.WriteValueSafe<bool>(false);
-                bufferWriter.WriteValueSafe(Vector3.zero);
-                BytePacker.WriteValueBitPacked(bufferWriter, (int)CauseOfDeath.Kicking);
-                BytePacker.WriteValueBitPacked(bufferWriter, 0);
-                PlayerControllerBEndSendClientRpc.Invoke(controller, new object[]{bufferWriter, 168339603U, clientRpcParams, RpcDelivery.Reliable});
-                LobbyControl.Log.LogInfo($"Player {controller.playerUsername} has been killed by host");
-
-                ToDisconnect[dcPlayer.Key] = dcPlayer.Value;
+                LobbyControl.Log.LogError($"Exception while respawning dead players {ex}");
             }
-            
+
             ToRespawn.Clear();
         }
         
@@ -179,42 +194,52 @@ namespace LobbyControl.Patches
         
         [HarmonyPrefix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.__rpc_handler_3083945322))]
-        private static void ClearDcPlayerForClient(StartOfRound __instance,
+        private static void ClearDcPlayerForClient(
             NetworkBehaviour target,
             __RpcParams rpcParams)
         {
             if (!LobbyControl.PluginConfig.InvisiblePlayer.Enabled.Value)
                 return;
-
+            StartOfRound startOfRound = (StartOfRound)target;
             NetworkManager networkManager = target.NetworkManager;
             if (networkManager == null || !networkManager.IsListening)
                 return;
             
-            if (!__instance.IsServer || ToDisconnect.Count == 0)
+            if (!startOfRound.IsServer || ToDisconnect.Count == 0)
                 return;
-            
-            ClientRpcParams clientRpcParams = new ClientRpcParams()
+
+            try
             {
-                Send = new ClientRpcSendParams()
+                ClientRpcParams clientRpcParams = new ClientRpcParams()
                 {
-                    TargetClientIds = new []{rpcParams.Server.Receive.SenderClientId}
+                    Send = new ClientRpcSendParams()
+                    {
+                        TargetClientIds = new[] { rpcParams.Server.Receive.SenderClientId }
+                    }
+                };
+
+                var client =
+                    startOfRound.allPlayerScripts[startOfRound.ClientPlayerList[rpcParams.Server.Receive.SenderClientId]];
+
+                foreach (var player in new Dictionary<ulong, int>(ToDisconnect))
+                {
+                    PlayerControllerB controller = startOfRound.allPlayerScripts[player.Value];
+                    //__instance.OnClientDisconnectClientRpc(player.Value, player.Key, clientRpcParams);
+                    FastBufferWriter bufferWriter = (FastBufferWriter)StartOfRoundBeginSendClientRpc.Invoke(startOfRound,
+                        new object[] { 475465488U, clientRpcParams, RpcDelivery.Reliable });
+                    BytePacker.WriteValueBitPacked(bufferWriter, player.Value);
+                    BytePacker.WriteValueBitPacked(bufferWriter, player.Key);
+                    StartOfRoundEndSendClientRpc.Invoke(startOfRound,
+                        new object[] { bufferWriter, 475465488U, clientRpcParams, RpcDelivery.Reliable });
+                    LobbyControl.Log.LogInfo(
+                        $"Player {controller.playerUsername} has been removed and should be visible to {client.playerUsername}");
                 }
-            };
 
-            var client =
-                __instance.allPlayerScripts[__instance.ClientPlayerList[rpcParams.Server.Receive.SenderClientId]];
-            
-            foreach (var player in new Dictionary<ulong,int>(ToDisconnect))
-            {
-                PlayerControllerB controller = __instance.allPlayerScripts[player.Value];
-                //__instance.OnClientDisconnectClientRpc(player.Value, player.Key, clientRpcParams);
-                FastBufferWriter bufferWriter = (FastBufferWriter)StartOfRoundBeginSendClientRpc.Invoke(__instance, new object[]{475465488U, clientRpcParams, RpcDelivery.Reliable});
-                BytePacker.WriteValueBitPacked(bufferWriter, player.Value);
-                BytePacker.WriteValueBitPacked(bufferWriter, player.Key);
-                StartOfRoundEndSendClientRpc.Invoke(__instance, new object[]{bufferWriter, 475465488U, clientRpcParams, RpcDelivery.Reliable});
-                LobbyControl.Log.LogInfo($"Player {controller.playerUsername} has been removed and should be visible to {client.playerUsername}");
             }
-
+            catch (Exception ex)
+            {
+                LobbyControl.Log.LogError($"Exception while disconnecting dead players {ex}");    
+            }
             _isRespawning = false;
         }
         

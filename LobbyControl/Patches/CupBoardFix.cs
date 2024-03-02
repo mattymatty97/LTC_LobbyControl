@@ -107,7 +107,7 @@ namespace LobbyControl.Patches
                 }
                 catch (Exception ex)
                 {
-                    LobbyControl.Log.LogError(ex);
+                    LobbyControl.Log.LogError($"Exception while checking for Cupboard {ex}");
                 }
             }
         }

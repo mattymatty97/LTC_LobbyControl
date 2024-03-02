@@ -1,3 +1,9 @@
+## v2.2.6
+- fix crash with InvisibleManFix ( rpc handlers are static! )
+
+## v2.2.5
+- make the mod actually work (move harmony back to Awake)
+
 ## v2.2.4
 - Fixes to InvisibleMan to avoid crashes
 - Improvements to ItemClippingFix ( now all offsets are dynamically calculated based on the model affecting also modded items)
