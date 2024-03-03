@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Linq;
 using System.Text;
 using BepInEx;
 using LethalAPI.LibTerminal.Attributes;
 using LethalAPI.LibTerminal.Models.Enums;
 using LobbyControl.Patches;
+using Unity.Netcode;
 using UnityEngine;
 using Object = UnityEngine.Object;
 // ReSharper disable MemberCanBePrivate.Global
@@ -370,9 +372,22 @@ Extra:
                             //remove all items
                             startOfRound.ResetShipFurniture();
                             startOfRound.ResetPooledObjects(true);
+                            //remove remaining unlockables
+                            foreach (var unlockable in StartOfRound.Instance.SpawnedShipUnlockables.ToList())
+                            {
+                                var itemEntry = startOfRound.unlockablesList.unlockables[unlockable.Key];
+                                if (!itemEntry.alreadyUnlocked || !itemEntry.spawnPrefab) 
+                                    continue;
+                                
+                                NetworkObject component = unlockable.Value.GetComponent<NetworkObject>();
+                                if (component != null && component.IsSpawned)
+                                    component.Despawn();
+                            }
+                            startOfRound.SpawnedShipUnlockables.Clear();
+                            startOfRound.suitsPlaced = 0;
                             //try reload the save file
                             startOfRound.SetTimeAndPlanetToSavedSettings();
-                            LobbyControl.ReloadShipUnlockables();
+                            startOfRound.LoadUnlockables();
                             startOfRound.StartCoroutine(LobbyControl.LoadItemsCoroutine());
                             terminal.Start();
                             //sync the new values

@@ -275,19 +275,25 @@
         </Reference>
     </ItemGroup>
     <ItemGroup>
-        <Compile Include="LobbyCommands.cs"/>
-        <Compile Include="Patches\CupBoardFix.cs" />
-        <Compile Include="Patches\GhostItemFix.cs" />
-        <Compile Include="Patches\ItemClippingPatch.cs"/>
-        <Compile Include="Patches\LimitPatcher.cs"/>
-        <Compile Include="Patches\NetworkPatcher.cs"/>
-        <Compile Include="Patches\LobbyPatcher.cs"/>
-        <Compile Include="LobbyControl.cs"/>
-        <Compile Include="Patches\RadarPatch.cs"/>
-        <Compile Include="Patches\SavePatches.cs" />
-        <Compile Include="Patches\TransparentPlayerPatch.cs"/>
-        <Compile Include="Patches\OutOfBoundsItemsFix.cs" />
-        <Compile Include="Properties\AssemblyInfo.cs"/>
+        <Compile Include="src\Components\LCCupboardParent.cs" />
+        <Compile Include="src\Components\LCItemClippping.cs" />
+        <Compile Include="src\Components\LCOutOfBounds.cs" />
+        <Compile Include="src\Components\LCRadarFix.cs" />
+        <Compile Include="src\Components\LCRotationSync.cs" />
+        <Compile Include="src\LobbyCommands.cs" />
+        <Compile Include="src\LobbyControl.cs" />
+        <Compile Include="src\Patches\CupBoardPatch.cs" />
+        <Compile Include="src\Patches\GhostItemFix.cs" />
+        <Compile Include="src\Patches\ItemClippingPatch.cs" />
+        <Compile Include="src\Patches\LimitPatcher.cs" />
+        <Compile Include="src\Patches\LobbyPatcher.cs" />
+        <Compile Include="src\Patches\NetworkPatcher.cs" />
+        <Compile Include="src\Patches\OutOfBoundsPatch.cs" />
+        <Compile Include="src\Patches\RadarPatch.cs" />
+        <Compile Include="src\Patches\RotationSyncPatch.cs" />
+        <Compile Include="src\Patches\SavePatches.cs" />
+        <Compile Include="src\Patches\TransparentPlayerFix.cs" />
+        <Compile Include="src\Properties\AssemblyInfo.cs" />
     </ItemGroup>
     <ItemGroup>
         <None Include="packages.config"/>

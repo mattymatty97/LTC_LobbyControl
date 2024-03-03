@@ -59,7 +59,7 @@ namespace LobbyControl.Patches
         
 
         /// <summary>
-        ///     Ensure that any incoming connections are properly accepted.
+        ///     Check extra parameters before accepting the connection.
         /// </summary>
         [HarmonyPostfix]
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.ConnectionApproval))]

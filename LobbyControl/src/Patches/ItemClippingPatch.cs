@@ -2,12 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using HarmonyLib;
+using LobbyControl.Components;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace LobbyControl.Patches
 {
     [HarmonyPatch]
-    internal class ItemClippingPatch
+    public class ItemClippingPatch
     {
         private static readonly Dictionary<string, List<float>> ItemFixes = new Dictionary<string, List<float>>
         {
@@ -218,6 +220,7 @@ namespace LobbyControl.Patches
             {
                 if (!LobbyControl.PluginConfig.ItemClipping.Enabled.Value)
                     return true;
+                
                 try
                 {
                     if (Physics.Raycast(gameplayCamera.position, gameplayCamera.forward, out var val, 7f,
@@ -278,9 +281,10 @@ namespace LobbyControl.Patches
                         Quaternion old_rot = go.transform.rotation;
 
                         go.transform.rotation = Quaternion.Euler(itemType.restingRotation);
-
+                        
                         try
                         {
+                            
                             Renderer renderer = go.GetComponent<Renderer>();
                             Bounds? bounds = renderer != null ? (Bounds?)renderer.bounds : null;
                             
@@ -295,6 +299,8 @@ namespace LobbyControl.Patches
                                 }
                             }
                             
+                            /*MeshCollider collider = go.AddComponent<MeshCollider>();
+                            Bounds? bounds = (Bounds?)collider.bounds;*/
                             if (bounds.HasValue)
                             {
                                 itemType.verticalOffset = -(bounds.Value.min.y - pos.y) +
@@ -308,7 +314,7 @@ namespace LobbyControl.Patches
                                 LobbyControl.Log.LogInfo(
                                     $"{itemType.itemName} original vertical offset is {itemType.verticalOffset}");
                             }
-
+                            //Object.Destroy(collider);
                         }
                         catch (Exception ex)
                         {
@@ -323,43 +329,35 @@ namespace LobbyControl.Patches
                     LobbyControl.Log.LogError($"An Object crashed badly! {ex}");
                 }
             }
-        }
-
-        [HarmonyPatch(typeof(GrabbableObject))]
-        internal class GrabbableObjectPatch
-        {
-            private static readonly HashSet<GrabbableObject> ObjectsToUpdate = new HashSet<GrabbableObject>();
-
-            [HarmonyPostfix]
-            [HarmonyPatch(nameof(GrabbableObject.Start))]
-            public static void StartPostfix(GrabbableObject __instance)
-            {
-                if (__instance.transform.name == "ClipboardManual" || __instance.transform.name == "StickyNoteItem")
-                    return;
-                //defer the update to the next tick
-                ObjectsToUpdate.Add(__instance);
-            }
-
+            
             [HarmonyPrefix]
-            [HarmonyPatch(nameof(GrabbableObject.Update))]
-            [HarmonyPriority(Priority.First)]
-            public static void UpdatePrefix(GrabbableObject __instance)
+            [HarmonyPatch(nameof(StartOfRound.LoadShipGrabbableItems))]
+            public static void AddComponent(StartOfRound __instance)
             {
-                if (!ObjectsToUpdate.Remove(__instance))
+                if (!LobbyControl.PluginConfig.ItemClipping.Enabled.Value)
                     return;
-
-                try
+                
+                foreach (var item in __instance.allItemsList.itemsList)
                 {
-                    __instance.transform.rotation = Quaternion.Euler(
-                        __instance.itemProperties.restingRotation.x,
-                        __instance.floorYRot == -1
-                            ? __instance.transform.eulerAngles.y
-                            : __instance.floorYRot + __instance.itemProperties.floorYOffset + 90f,
-                        __instance.itemProperties.restingRotation.z);
+                    if (item.spawnPrefab is null)
+                        continue;
+                
+                    if (!item.spawnPrefab.GetComponent<LCItemClippping>())
+                        item.spawnPrefab.AddComponent<LCItemClippping>();
                 }
-                catch (Exception ex)
+            }            
+            
+            [HarmonyPostfix]
+            [HarmonyPatch(nameof(StartOfRound.LoadShipGrabbableItems))]
+            public static void RemoveComponent(StartOfRound __instance)
+            {
+                foreach (var item in __instance.allItemsList.itemsList)
                 {
-                    LobbyControl.Log.LogError($"Exception while setting rotation :{ex}");
+                    if (item.spawnPrefab is null)
+                        continue;
+                
+                    if (item.spawnPrefab.TryGetComponent<LCItemClippping>(out var component))
+                        UnityEngine.Object.Destroy(component);
                 }
             }
         }

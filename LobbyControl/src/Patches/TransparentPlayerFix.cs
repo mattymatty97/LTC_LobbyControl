@@ -9,7 +9,7 @@ using UnityEngine;
 namespace LobbyControl.Patches
 {
     [HarmonyPatch]
-    internal class TransparentPlayerPatch
+    internal class TransparentPlayerFix
     {
         private static readonly MethodInfo StartOfRoundBeginSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__beginSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
         private static readonly MethodInfo StartOfRoundEndSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__endSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
