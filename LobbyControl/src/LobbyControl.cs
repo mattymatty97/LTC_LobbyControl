@@ -109,10 +109,16 @@ namespace LobbyControl
                 //GhostItems
                 GhostItems.Enabled = config.Bind("GhostItems","enabled",false
                     ,"prevent the creation of non-grabbable items in case of inventory desync");
+                GhostItems.ForceDrop = config.Bind("GhostItems","force_drop",false
+                    ,"forcefully drop all items of the player causing the desync");
                 //ItemClipping
                 ItemClipping.Enabled = config.Bind("ItemClipping","enabled",true
                     ,"fix rotation and height of various items when on the Ground");
+                ItemClipping.RotateOnSpawn = config.Bind("ItemClipping","rotate_on_spawn",true
+                    ,"fix rotation of newly spawned items");
                 ItemClipping.VerticalOffset = config.Bind("ItemClipping","vertical_offset",0f
+                    ,"additional y offset for items on the ground");
+                ItemClipping.ManualOffsets = config.Bind("ItemClipping","manual_offsets","Apparatus:0.25,Pro-flashlight:0.03,Large axle:0.55"
                     ,"y offset for items on the ground");
                 //SaveLimit
                 SaveLimit.Enabled = config.Bind("SaveLimit","enabled",true
@@ -159,12 +165,15 @@ namespace LobbyControl
             internal static class GhostItems
             {
                 internal static ConfigEntry<bool> Enabled;
+                internal static ConfigEntry<bool> ForceDrop;
             }
             
             internal static class ItemClipping
             {
                 internal static ConfigEntry<bool> Enabled;
+                internal static ConfigEntry<bool> RotateOnSpawn;
                 internal static ConfigEntry<float> VerticalOffset;
+                internal static ConfigEntry<string> ManualOffsets;
             }
             
             internal static class SaveLimit

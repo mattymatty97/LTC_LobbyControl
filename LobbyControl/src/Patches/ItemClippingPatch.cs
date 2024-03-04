@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using HarmonyLib;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace LobbyControl.Patches
@@ -253,6 +254,7 @@ namespace LobbyControl.Patches
         [HarmonyPatch(typeof(StartOfRound))]
         internal class StartOfRoundPatch
         {
+            
             [HarmonyPostfix]
             [HarmonyPatch(nameof(StartOfRound.Awake))]
             private static void AwakePatch(StartOfRound __instance, bool __runOriginal)
@@ -263,6 +265,19 @@ namespace LobbyControl.Patches
                 if (!__runOriginal)
                     return;
 
+                Dictionary<string, float> manualOffsets = new Dictionary<string, float>();
+                var offsetString = LobbyControl.PluginConfig.ItemClipping.ManualOffsets.Value;
+                foreach (var entry in offsetString.Split(','))
+                {
+                    var parts = entry.Split(':');
+                    if (parts.Length <= 1) 
+                        continue;
+                    
+                    var name = parts[0];
+                    if(float.TryParse(parts[1], out var value))
+                        manualOffsets.Add(name, value);
+                }
+                
                 try
                 {
                     foreach (var itemType in __instance.allItemsList.itemsList)
@@ -278,50 +293,62 @@ namespace LobbyControl.Patches
 
                         var go = itemType.spawnPrefab;
                         var pos = go.transform.position;
-                        var old_rot = go.transform.rotation;
+                        var oldRot = go.transform.rotation;
 
                         go.transform.rotation = Quaternion.Euler(itemType.restingRotation);
 
                         try
                         {
-                            var renderer = go.GetComponent<Renderer>();
-                            Bounds? bounds = renderer != null ? (Bounds?)renderer.bounds : null;
 
-                            if (!bounds.HasValue)
+                            if (!manualOffsets.TryGetValue(
+                                    itemType.itemName, out var offset))
                             {
-                                Renderer[] renderers = go.GetComponentsInChildren<Renderer>().Where(r => r.enabled)
-                                    .ToArray();
-                                if (renderers.Length > 0)
+
+                                var renderer = go.GetComponent<Renderer>();
+                                Bounds? bounds = renderer != null ? (Bounds?)renderer.bounds : null;
+
+                                if (!bounds.HasValue)
                                 {
-                                    bounds = renderers[0].bounds;
-                                    for (var i = 1; i < renderers.Length; ++i)
-                                        bounds.Value.Encapsulate(renderers[i].bounds);
+                                    var renderers = go.GetComponentsInChildren<Renderer>().Where(r => r.enabled)
+                                        .ToArray();
+                                    if (renderers.Length > 0)
+                                    {
+                                        bounds = renderers[0].bounds;
+                                        for (var i = 1; i < renderers.Length; ++i)
+                                            bounds.Value.Encapsulate(renderers[i].bounds);
+                                    }
                                 }
-                            }
 
-                            /*MeshCollider collider = go.AddComponent<MeshCollider>();
-                            Bounds? bounds = (Bounds?)collider.bounds;*/
-                            if (bounds.HasValue)
-                            {
-                                itemType.verticalOffset = -(bounds.Value.min.y - pos.y) +
-                                                          LobbyControl.PluginConfig.ItemClipping.VerticalOffset.Value;
+                                if (bounds.HasValue)
+                                {
+                                    itemType.verticalOffset = (pos.y - bounds.Value.min.y) +
+                                                              LobbyControl.PluginConfig.ItemClipping.VerticalOffset
+                                                                  .Value;
 
-                                LobbyControl.Log.LogInfo(
-                                    $"{itemType.itemName} computed vertical offset is now {itemType.verticalOffset}");
+                                    LobbyControl.Log.LogInfo(
+                                        $"{itemType.itemName} computed vertical offset is now {itemType.verticalOffset}");
+                                }
+                                else
+                                {
+                                    LobbyControl.Log.LogInfo(
+                                        $"{itemType.itemName} original vertical offset is {itemType.verticalOffset}");
+                                }
                             }
                             else
                             {
-                                LobbyControl.Log.LogInfo(
-                                    $"{itemType.itemName} original vertical offset is {itemType.verticalOffset}");
+                                itemType.verticalOffset = offset +
+                                                          LobbyControl.PluginConfig.ItemClipping.VerticalOffset
+                                                              .Value;
+
+                                LobbyControl.Log.LogInfo($"{itemType.itemName} manual vertical offset is now {itemType.verticalOffset}");
                             }
-                            //Object.Destroy(collider);
                         }
                         catch (Exception ex)
                         {
                             LobbyControl.Log.LogError($"{itemType.itemName} crashed! {ex}");
                         }
 
-                        go.transform.rotation = old_rot;
+                        go.transform.rotation = oldRot;
                     }
                 }
                 catch (Exception ex)
@@ -345,34 +372,44 @@ namespace LobbyControl.Patches
             }
         }
 
-        [HarmonyPatch(typeof(GrabbableObject))]
+        [HarmonyPatch(typeof(NetworkBehaviour))]
         internal class GrabbableObjectPatch
         {
             
             [HarmonyPostfix]
-            [HarmonyPatch(nameof(GrabbableObject.Start))]
-            private static void StartPostfix(GrabbableObject __instance)
+            [HarmonyPatch(nameof(NetworkBehaviour.OnNetworkSpawn))]
+            [HarmonyPriority(0)]
+            private static void StartPostfix(NetworkBehaviour __instance)
             {
+               
+                if (!(__instance is GrabbableObject grabbable))
+                    return;
+                
+                if (!LobbyControl.PluginConfig.ItemClipping.RotateOnSpawn.Value)
+                    return;
+                
                 if (__instance.transform.name == "ClipboardManual" || __instance.transform.name == "StickyNoteItem")
                     return;
                 
-                if (!__instance.isInShipRoom || !_isLoadingLobby)
+                if (!grabbable.isInShipRoom || !_isLoadingLobby)
                     return;
 
                 try
                 {
-                    __instance.transform.rotation = Quaternion.Euler(
-                        __instance.itemProperties.restingRotation.x,
-                        __instance.floorYRot == -1
-                            ? __instance.transform.eulerAngles.y
-                            : __instance.floorYRot + __instance.itemProperties.floorYOffset + 90f,
-                        __instance.itemProperties.restingRotation.z);
+                    grabbable.transform.rotation = Quaternion.Euler(
+                        grabbable.itemProperties.restingRotation.x,
+                        grabbable.floorYRot == -1
+                            ? grabbable.transform.eulerAngles.y
+                            : grabbable.floorYRot + grabbable.itemProperties.floorYOffset + 90f,
+                        grabbable.itemProperties.restingRotation.z);
                 }
                 catch (Exception ex)
                 {
                     LobbyControl.Log.LogError($"Exception while setting rotation :{ex}");
                 }
             }
+            
+            
         }
     }
 }

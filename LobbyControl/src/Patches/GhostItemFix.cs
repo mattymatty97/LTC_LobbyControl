@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Reflection.Emit;
 using GameNetcodeStuff;
 using HarmonyLib;
@@ -46,8 +47,7 @@ namespace LobbyControl.Patches
 
             return codes;
         }
-
-
+        
         public static bool CheckGrab(PlayerControllerB controllerB)
         {
             if (!LobbyControl.PluginConfig.GhostItems.Enabled.Value)
@@ -61,6 +61,8 @@ namespace LobbyControl.Patches
                 LobbyControl.Log.LogError(
                     $"Grab invalidated for {controllerB.playerUsername} out of inventory space! ( use lobby dropall to fix )");
                 HUDManager.Instance.AddTextToChatOnServer($"{controllerB.playerUsername} is out of inventory space!");
+                if (LobbyControl.PluginConfig.GhostItems.ForceDrop.Value)
+                    controllerB.DropAllHeldItemsServerRpc();
             }
             else
                 LobbyControl.Log.LogInfo($"Grab validated for {controllerB.playerUsername}!");
