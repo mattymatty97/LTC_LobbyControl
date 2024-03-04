@@ -2,14 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using HarmonyLib;
-using LobbyControl.Components;
 using UnityEngine;
-using Object = UnityEngine.Object;
 
 namespace LobbyControl.Patches
 {
     [HarmonyPatch]
-    public class ItemClippingPatch
+    internal class ItemClippingPatch
     {
         private static readonly Dictionary<string, List<float>> ItemFixes = new Dictionary<string, List<float>>
         {
@@ -139,7 +137,7 @@ namespace LobbyControl.Patches
             },
             {
                 "Ring[0]",
-                new List<float>(3) {  0f, -90f, 90f }
+                new List<float>(3) { 0f, -90f, 90f }
             },
             {
                 "Toy robot[0]",
@@ -195,13 +193,15 @@ namespace LobbyControl.Patches
             },
             {
                 "Comedy[0]",
-                new List<float>(3) {  -90f, 0f, 0f }
+                new List<float>(3) { -90f, 0f, 0f }
             },
             {
                 "Whoopie cushion[0]",
-                new List<float>(3) {  -90f, 0f, 0f }
+                new List<float>(3) { -90f, 0f, 0f }
             }
         };
+
+        private static bool _isLoadingLobby;
 
         internal static Vector3 FixPlacement(Vector3 hitPoint, Transform shelfTransform, GrabbableObject heldObject)
         {
@@ -211,16 +211,16 @@ namespace LobbyControl.Patches
         }
 
         [HarmonyPatch(typeof(PlaceableObjectsSurface))]
-        public class PlaceableObjectsSurfacePatch
+        internal class PlaceableObjectsSurfacePatch
         {
             [HarmonyPrefix]
             [HarmonyPatch(nameof(PlaceableObjectsSurface.itemPlacementPosition))]
-            public static bool itemPlacementPositionPatch(PlaceableObjectsSurface __instance, ref Vector3 __result,
+            private static bool itemPlacementPositionPatch(PlaceableObjectsSurface __instance, ref Vector3 __result,
                 Transform gameplayCamera, GrabbableObject heldObject)
             {
                 if (!LobbyControl.PluginConfig.ItemClipping.Enabled.Value)
                     return true;
-                
+
                 try
                 {
                     if (Physics.Raycast(gameplayCamera.position, gameplayCamera.forward, out var val, 7f,
@@ -251,11 +251,11 @@ namespace LobbyControl.Patches
         }
 
         [HarmonyPatch(typeof(StartOfRound))]
-        public class StartOfRoundPatch
+        internal class StartOfRoundPatch
         {
             [HarmonyPostfix]
             [HarmonyPatch(nameof(StartOfRound.Awake))]
-            public static void AwakePatch(StartOfRound __instance, bool __runOriginal)
+            private static void AwakePatch(StartOfRound __instance, bool __runOriginal)
             {
                 if (!LobbyControl.PluginConfig.ItemClipping.Enabled.Value)
                     return;
@@ -275,22 +275,22 @@ namespace LobbyControl.Patches
 
                         if (value.Count > 1)
                             itemType.restingRotation.Set(value[0], value[1], value[2]);
-                        
-                        GameObject go = itemType.spawnPrefab;
-                        Vector3 pos = go.transform.position;
-                        Quaternion old_rot = go.transform.rotation;
+
+                        var go = itemType.spawnPrefab;
+                        var pos = go.transform.position;
+                        var old_rot = go.transform.rotation;
 
                         go.transform.rotation = Quaternion.Euler(itemType.restingRotation);
-                        
+
                         try
                         {
-                            
-                            Renderer renderer = go.GetComponent<Renderer>();
+                            var renderer = go.GetComponent<Renderer>();
                             Bounds? bounds = renderer != null ? (Bounds?)renderer.bounds : null;
-                            
+
                             if (!bounds.HasValue)
                             {
-                                var renderers = go.GetComponentsInChildren<Renderer>().Where(r=>r.enabled).ToArray();
+                                Renderer[] renderers = go.GetComponentsInChildren<Renderer>().Where(r => r.enabled)
+                                    .ToArray();
                                 if (renderers.Length > 0)
                                 {
                                     bounds = renderers[0].bounds;
@@ -298,7 +298,7 @@ namespace LobbyControl.Patches
                                         bounds.Value.Encapsulate(renderers[i].bounds);
                                 }
                             }
-                            
+
                             /*MeshCollider collider = go.AddComponent<MeshCollider>();
                             Bounds? bounds = (Bounds?)collider.bounds;*/
                             if (bounds.HasValue)
@@ -329,35 +329,48 @@ namespace LobbyControl.Patches
                     LobbyControl.Log.LogError($"An Object crashed badly! {ex}");
                 }
             }
-            
+
             [HarmonyPrefix]
             [HarmonyPatch(nameof(StartOfRound.LoadShipGrabbableItems))]
-            public static void AddComponent(StartOfRound __instance)
+            private static void BeforeLoad()
             {
-                if (!LobbyControl.PluginConfig.ItemClipping.Enabled.Value)
-                    return;
-                
-                foreach (var item in __instance.allItemsList.itemsList)
-                {
-                    if (item.spawnPrefab is null)
-                        continue;
-                
-                    if (!item.spawnPrefab.GetComponent<LCItemClippping>())
-                        item.spawnPrefab.AddComponent<LCItemClippping>();
-                }
-            }            
-            
+                _isLoadingLobby = true;
+            }
+
             [HarmonyPostfix]
             [HarmonyPatch(nameof(StartOfRound.LoadShipGrabbableItems))]
-            public static void RemoveComponent(StartOfRound __instance)
+            private static void AfterLoad()
             {
-                foreach (var item in __instance.allItemsList.itemsList)
-                {
-                    if (item.spawnPrefab is null)
-                        continue;
+                _isLoadingLobby = false;
+            }
+        }
+
+        [HarmonyPatch(typeof(GrabbableObject))]
+        internal class GrabbableObjectPatch
+        {
+            
+            [HarmonyPostfix]
+            [HarmonyPatch(nameof(GrabbableObject.Start))]
+            private static void StartPostfix(GrabbableObject __instance)
+            {
+                if (__instance.transform.name == "ClipboardManual" || __instance.transform.name == "StickyNoteItem")
+                    return;
                 
-                    if (item.spawnPrefab.TryGetComponent<LCItemClippping>(out var component))
-                        UnityEngine.Object.Destroy(component);
+                if (!__instance.isInShipRoom || !_isLoadingLobby)
+                    return;
+
+                try
+                {
+                    __instance.transform.rotation = Quaternion.Euler(
+                        __instance.itemProperties.restingRotation.x,
+                        __instance.floorYRot == -1
+                            ? __instance.transform.eulerAngles.y
+                            : __instance.floorYRot + __instance.itemProperties.floorYOffset + 90f,
+                        __instance.itemProperties.restingRotation.z);
+                }
+                catch (Exception ex)
+                {
+                    LobbyControl.Log.LogError($"Exception while setting rotation :{ex}");
                 }
             }
         }

@@ -1,9 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
+using System.Reflection.Emit;
 using HarmonyLib;
-using Mono.Cecil.Cil;
 using Unity.Netcode;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -14,15 +13,17 @@ namespace LobbyControl.Patches
     [HarmonyPatch]
     internal class NetworkPatcher
     {
-        
+        private static readonly HashSet<ulong> PendingClients = new HashSet<ulong>();
+
         /// <summary>
         ///     Do not check for gameHasStarted.
         /// </summary>
         [HarmonyTranspiler]
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.ConnectionApproval))]
-        private static IEnumerable<CodeInstruction> FixConnectionApprovalPrefix(IEnumerable<CodeInstruction> instructions)
+        private static IEnumerable<CodeInstruction> FixConnectionApprovalPrefix(
+            IEnumerable<CodeInstruction> instructions)
         {
-            FieldInfo gameStartedField = typeof(GameNetworkManager).GetField(nameof(GameNetworkManager.gameHasStarted));
+            var gameStartedField = typeof(GameNetworkManager).GetField(nameof(GameNetworkManager.gameHasStarted));
             List<CodeInstruction> code = instructions.ToList();
 
             for (var index = 0; index < code.Count; index++)
@@ -32,7 +33,7 @@ namespace LobbyControl.Patches
                 {
                     var next = code[index + 1];
                     var prec = code[index - 1];
-                    if (next.Branches(out var dest))
+                    if (next.Branches(out Label? dest))
                     {
                         code[index - 1] = new CodeInstruction(OpCodes.Nop)
                         {
@@ -49,6 +50,7 @@ namespace LobbyControl.Patches
                             labels = next.labels,
                             blocks = next.blocks
                         };
+                        LobbyControl.Log.LogDebug("Patched ConnectionApproval!!");
                         break;
                     }
                 }
@@ -56,7 +58,7 @@ namespace LobbyControl.Patches
 
             return code;
         }
-        
+
 
         /// <summary>
         ///     Check extra parameters before accepting the connection.
@@ -64,15 +66,15 @@ namespace LobbyControl.Patches
         [HarmonyPostfix]
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.ConnectionApproval))]
         [HarmonyPriority(0)]
-        private static void FixConnectionApprovalPostFix(GameNetworkManager __instance, bool __runOriginal, 
+        private static void FixConnectionApprovalPostFix(GameNetworkManager __instance, bool __runOriginal,
             NetworkManager.ConnectionApprovalResponse response)
         {
-
             if (!__runOriginal || !response.Approved)
                 return;
-            
+
             //if we're allowing late connections log it
-            if (__instance.gameHasStarted && response.Approved && __instance.currentLobby.HasValue && LobbyPatcher.IsOpen(__instance.currentLobby.Value))
+            if (__instance.gameHasStarted && response.Approved && __instance.currentLobby.HasValue &&
+                LobbyPatcher.IsOpen(__instance.currentLobby.Value))
             {
                 LobbyControl.Log.LogDebug("Approving incoming late connection.");
             }
@@ -83,7 +85,8 @@ namespace LobbyControl.Patches
                 response.Reason = "Ship has already landed!";
                 response.Approved = false;
             }
-            else if (!__instance.disableSteam && (!__instance.currentLobby.HasValue || !LobbyPatcher.IsOpen(__instance.currentLobby.Value)))
+            else if (!__instance.disableSteam &&
+                     (!__instance.currentLobby.HasValue || !LobbyPatcher.IsOpen(__instance.currentLobby.Value)))
             {
                 LobbyControl.Log.LogDebug("Late connection refused ( lobby was closed ).");
                 response.Reason = "Lobby has been closed!";
@@ -102,7 +105,8 @@ namespace LobbyControl.Patches
                 return;
             var manager = GameNetworkManager.Instance;
             // Only do this if the game isn't doing it by itself already.
-            if (GameNetworkManager.Instance.gameHasStarted && manager.currentLobby.HasValue && LobbyPatcher.IsOpen(manager.currentLobby.Value))
+            if (GameNetworkManager.Instance.gameHasStarted && manager.currentLobby.HasValue &&
+                LobbyPatcher.IsOpen(manager.currentLobby.Value))
                 GameNetworkManager.Instance.InviteFriendsUI();
         }
 
@@ -145,7 +149,7 @@ namespace LobbyControl.Patches
         {
             if (!__runOriginal)
                 return;
-            
+
             LobbyControl.CanModifyLobby = true;
             PendingClients.Clear();
         }
@@ -160,7 +164,7 @@ namespace LobbyControl.Patches
         {
             if (!__runOriginal)
                 yield break;
-            
+
             // The method we're patching here is a coroutine. Fully exhaust it before adding our code.
             while (coroutine.MoveNext())
                 yield return coroutine.Current;
@@ -194,16 +198,14 @@ namespace LobbyControl.Patches
             }
         }
 
-        private static readonly HashSet<ulong> PendingClients = new HashSet<ulong>();
-
         [HarmonyPrefix]
-        [HarmonyPatch(typeof(StartOfRound),nameof(StartOfRound.OnClientConnect))]
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnClientConnect))]
         [HarmonyPriority(Priority.High)]
         private static bool PreventExtraClients(StartOfRound __instance, bool __runOriginal, ulong clientId)
         {
             if (!__runOriginal)
                 return false;
-            
+
             if (!__instance.IsServer)
                 return true;
 
@@ -213,24 +215,24 @@ namespace LobbyControl.Patches
                 return true;
             }
 
-            LobbyControl.Log.LogWarning($"Player with ID {clientId} attempted to join a full lobby! pending {PendingClients.Count}");
+            LobbyControl.Log.LogWarning(
+                $"Player with ID {clientId} attempted to join a full lobby! pending {PendingClients.Count}");
             NetworkManager.Singleton.DisconnectClient(clientId);
             return false;
+        }
 
-        }        
-        
         [HarmonyFinalizer]
-        [HarmonyPatch(typeof(StartOfRound),nameof(StartOfRound.OnPlayerConnectedClientRpc))]
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnPlayerConnectedClientRpc))]
         private static void ForgetPendingClients(StartOfRound __instance, ulong clientId)
         {
-            
             if (!__instance.IsServer)
                 return;
 
-            NetworkManager networkManager = __instance.NetworkManager;
-            if (__instance.__rpc_exec_stage != NetworkBehaviour.__RpcExecStage.Client || !networkManager.IsClient && !networkManager.IsHost)
+            var networkManager = __instance.NetworkManager;
+            if (__instance.__rpc_exec_stage != NetworkBehaviour.__RpcExecStage.Client ||
+                (!networkManager.IsClient && !networkManager.IsHost))
                 return;
-            
+
             PendingClients.Remove(clientId);
         }
     }

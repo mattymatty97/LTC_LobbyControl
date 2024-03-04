@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection.Emit;
 using GameNetcodeStuff;
 using HarmonyLib;
 using Unity.Netcode;
@@ -8,38 +11,61 @@ using UnityEngine;
 namespace LobbyControl.Patches
 {
     [HarmonyPatch]
-    internal class GhostItemFix
+    public class GhostItemFix
     {
-        [HarmonyFinalizer]
-        [HarmonyPatch(typeof(PlayerControllerB),nameof(PlayerControllerB.GrabObjectClientRpc))]
-        private static Exception CatchGhostItemCreation(Exception __exception, PlayerControllerB __instance, NetworkObjectReference grabbedObject)
+
+        [HarmonyTranspiler]
+        [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.GrabObjectServerRpc))]
+        private static IEnumerable<CodeInstruction> CheckOverflow(IEnumerable<CodeInstruction> instructions)
         {
-            
-            if (!LobbyControl.PluginConfig.GhostItems.Enabled.Value)
-                return __exception;
-            try
+            List<CodeInstruction> codes = instructions.ToList();
+
+            var info = typeof(GhostItemFix).GetMethod(nameof(CheckGrab));
+
+            for (var i = 0; i < codes.Count; i++)
             {
-                if (StartOfRound.Instance.IsServer && __exception != null)
+                if (!codes[i].IsLdarga())
+                    continue;
+
+                if (!codes[i - 1].IsStloc())
+                    continue;
+
+                codes[i - 3] = new CodeInstruction(OpCodes.Ldarg_0)
                 {
-                    //if this did generate a ghost item force the attempting player to drop all held items :smirk:
-                    __instance.StartCoroutine(DropAll(__instance));
-                    return null;
-                }
-            }
-            catch (Exception ex)
-            {
-                LobbyControl.Log.LogError($"Exception while dropping Items {ex}");
+                    labels = codes[i - 3].labels,
+                    blocks = codes[i - 3].blocks
+                };
+                codes[i - 2] = new CodeInstruction(OpCodes.Call, info)
+                {
+                    labels = codes[i - 2].labels,
+                    blocks = codes[i - 2].blocks
+                };
+                LobbyControl.Log.LogDebug("Patched GrabObjectServerRpc!!");
+                break;
             }
 
-            return __exception;
+            return codes;
         }
 
-        private static IEnumerator DropAll(PlayerControllerB playerControllerB)
+
+        public static bool CheckGrab(PlayerControllerB controllerB)
         {
-            yield return new WaitForSeconds(1);
-            playerControllerB.DropAllHeldItemsServerRpc();
-            HUDManager.Instance.AddTextToChatOnServer(
-                $"{playerControllerB.playerUsername} was forced to drop all Items!!");
+            if (!LobbyControl.PluginConfig.GhostItems.Enabled.Value)
+                return true;
+            
+            var slot = controllerB.FirstEmptyItemSlot();
+            var flag = slot < controllerB.ItemSlots.Length && slot >= 0;
+            LobbyControl.Log.LogDebug($"Attempted Grab for {controllerB.playerUsername}, slot {slot}, max {controllerB.ItemSlots.Length}");
+            if (!flag)
+            {
+                LobbyControl.Log.LogError(
+                    $"Grab invalidated for {controllerB.playerUsername} out of inventory space! ( use lobby dropall to fix )");
+                HUDManager.Instance.AddTextToChatOnServer($"{controllerB.playerUsername} is out of inventory space!");
+            }
+            else
+                LobbyControl.Log.LogInfo($"Grab validated for {controllerB.playerUsername}!");
+            return flag;
         }
+        
     }
 }

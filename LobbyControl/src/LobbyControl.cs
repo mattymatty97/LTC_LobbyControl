@@ -12,7 +12,6 @@ using LethalAPI.LibTerminal;
 using LethalAPI.LibTerminal.Models;
 using Unity.Netcode;
 using UnityEngine;
-using UnityEngine.UIElements.Collections;
 using Object = UnityEngine.Object;
 using PluginInfo = BepInEx.PluginInfo;
 
@@ -129,10 +128,7 @@ namespace LobbyControl
                     ,"prevent items from falling below the ship");
                 OutOfBounds.VerticalOffset = config.Bind("OutOfBounds","vertical_offset",0.2f
                     ,"vertical offset to apply to objects on load");
-                //RotationSync
-                RotationSync.Enabled = config.Bind("RotationSync","enabled",true
-                    ,"attempt to keep item rotation synced while not held ( ladders being in different rotation across clients )\nOther Clients need to have the mod installed to see the changes");
-                
+
                 //remove unused options
                 PropertyInfo orphanedEntriesProp = config.GetType().GetProperty("OrphanedEntries", BindingFlags.NonPublic | BindingFlags.Instance);
 
@@ -185,11 +181,6 @@ namespace LobbyControl
             {
                 internal static ConfigEntry<bool> Enabled;
                 internal static ConfigEntry<float> VerticalOffset;
-            }
-            
-            internal static class RotationSync
-            {
-                internal static ConfigEntry<bool> Enabled;
             }
         }
 
