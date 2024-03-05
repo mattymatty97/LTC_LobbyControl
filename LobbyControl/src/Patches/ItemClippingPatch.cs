@@ -303,21 +303,7 @@ namespace LobbyControl.Patches
                             if (!manualOffsets.TryGetValue(
                                     itemType.itemName, out var offset))
                             {
-
-                                var renderer = go.GetComponent<Renderer>();
-                                Bounds? bounds = renderer != null ? (Bounds?)renderer.bounds : null;
-
-                                if (!bounds.HasValue)
-                                {
-                                    var renderers = go.GetComponentsInChildren<Renderer>().Where(r => r.enabled)
-                                        .ToArray();
-                                    if (renderers.Length > 0)
-                                    {
-                                        bounds = renderers[0].bounds;
-                                        for (var i = 1; i < renderers.Length; ++i)
-                                            bounds.Value.Encapsulate(renderers[i].bounds);
-                                    }
-                                }
+                                Bounds? bounds = CalculateBounds(go);
 
                                 if (bounds.HasValue)
                                 {
@@ -356,6 +342,7 @@ namespace LobbyControl.Patches
                     LobbyControl.Log.LogError($"An Object crashed badly! {ex}");
                 }
             }
+
 
             [HarmonyPrefix]
             [HarmonyPatch(nameof(StartOfRound.LoadShipGrabbableItems))]
@@ -409,7 +396,25 @@ namespace LobbyControl.Patches
                 }
             }
             
-            
+        }
+        internal static Bounds? CalculateBounds(GameObject go)
+        {
+            var renderer = go.GetComponent<Renderer>();
+            Bounds? bounds = renderer != null ? (Bounds?)renderer.bounds : null;
+
+            if (!bounds.HasValue)
+            {
+                var renderers = go.GetComponentsInChildren<Renderer>().Where(r => r.enabled)
+                    .ToArray();
+                if (renderers.Length > 0)
+                {
+                    bounds = renderers[0].bounds;
+                    for (var i = 1; i < renderers.Length; ++i)
+                        bounds.Value.Encapsulate(renderers[i].bounds);
+                }
+            }
+
+            return bounds;
         }
     }
 }

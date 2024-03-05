@@ -132,6 +132,15 @@ namespace LobbyControl
                     ,"prevent items from falling below the ship");
                 OutOfBounds.VerticalOffset = config.Bind("OutOfBounds","vertical_offset",0.2f
                     ,"vertical offset to apply to objects on load");
+                //LogSpam
+                LogSpam.Enabled = config.Bind("LogSpam","enabled",true
+                    ,"prevent some annoying log spam");
+                LogSpam.CalculatePolygonPath = config.Bind("LogSpam","CalculatePolygonPath",true
+                    ,"stop pathfinding for dead Enemies");
+                LogSpam.ZeroSurfaceArea = config.Bind("LogSpam","zero_surface_area",true
+                    ,"use sphere shape for lightning particles ( this also makes them more visible on all items )");
+                LogSpam.AudioSpacializer = config.Bind("LogSpam","zero_surface_area",true
+                    ,"WIP");
 
                 //remove unused options
                 PropertyInfo orphanedEntriesProp = config.GetType().GetProperty("OrphanedEntries", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -188,6 +197,14 @@ namespace LobbyControl
             {
                 internal static ConfigEntry<bool> Enabled;
                 internal static ConfigEntry<float> VerticalOffset;
+            }
+            
+            internal static class LogSpam
+            {
+                internal static ConfigEntry<bool> Enabled;
+                internal static ConfigEntry<bool> CalculatePolygonPath;
+                internal static ConfigEntry<bool> ZeroSurfaceArea;
+                internal static ConfigEntry<bool> AudioSpacializer;
             }
         }
 

@@ -379,6 +379,9 @@ Extra:
                                 if (!itemEntry.alreadyUnlocked || !itemEntry.spawnPrefab) 
                                     continue;
                                 
+                                if(unlockable.Value == null)
+                                    continue;
+                                
                                 NetworkObject component = unlockable.Value.GetComponent<NetworkObject>();
                                 if (component != null && component.IsSpawned)
                                     component.Despawn();

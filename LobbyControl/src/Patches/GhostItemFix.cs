@@ -76,6 +76,12 @@ namespace LobbyControl.Patches
             if (!StartOfRound.Instance.IsServer)
                 return;
             
+            NetworkManager networkManager = __instance.NetworkManager;
+            if (networkManager == null || !networkManager.IsListening)
+                return;
+            if (__instance.__rpc_exec_stage != NetworkBehaviour.__RpcExecStage.Server || !networkManager.IsServer && !networkManager.IsHost)
+                return;
+            
             if (!LobbyControl.PluginConfig.GhostItems.Enabled.Value)
                 return;
             
@@ -85,7 +91,7 @@ namespace LobbyControl.Patches
             if (!networkObject.TryGetComponent<GrabbableObject>(out var component))
                 return;
             
-            if(component == __instance.currentlyHeldObject)
+            if(component == __instance.currentlyHeldObjectServer)
                 return;
             
             if (!LobbyControl.PluginConfig.GhostItems.ForceDrop.Value)

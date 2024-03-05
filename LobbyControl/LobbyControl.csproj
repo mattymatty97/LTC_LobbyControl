@@ -282,6 +282,7 @@
         <Compile Include="src\Patches\ItemClippingPatch.cs" />
         <Compile Include="src\Patches\LimitPatcher.cs" />
         <Compile Include="src\Patches\LobbyPatcher.cs" />
+        <Compile Include="src\Patches\LogSpamFix.cs" />
         <Compile Include="src\Patches\NetworkPatcher.cs" />
         <Compile Include="src\Patches\OutOfBoundsItemsFix.cs" />
         <Compile Include="src\Patches\RadarPatch.cs" />
