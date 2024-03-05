@@ -11,6 +11,7 @@
         <ThunderStoreItems Include="..\manifest.json"/>
         <ThunderStoreItems Include="..\README.md"/>
         <ThunderStoreItems Include="..\CHANGELOG.md"/>
+        <ThunderStoreItems Include="..\Dependencies/LethalAPI.TerminalCommands.dll"/>
     </ItemGroup>
     <!-- Defining the reference files that have to be publicized. -->
     <ItemGroup>
@@ -25,6 +26,7 @@
 
         <!-- clean referencing -->
         <Reference Include="..\Dependencies\Unity.TextMeshPro.dll" Publicize="false"/>
+        <Reference Include="..\Dependencies\LethalAPI.TerminalCommands.dll" Publicize="false"/>
     </ItemGroup>
     
     <!-- Ensure the user (you!) has actually set everything up properly. -->

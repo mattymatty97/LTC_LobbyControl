@@ -8,8 +8,7 @@ using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
-using LethalAPI.LibTerminal;
-using LethalAPI.LibTerminal.Models;
+using LethalAPI.TerminalCommands.Models;
 using Unity.Netcode;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -19,7 +18,6 @@ using PluginInfo = BepInEx.PluginInfo;
 namespace LobbyControl
 {
     [BepInPlugin(GUID, NAME, VERSION)]
-    [BepInDependency("LethalAPI.Terminal","1.0.0")]
     [BepInDependency("com.github.tinyhoot.ShipLobby", Flags:BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("twig.latecompany", Flags:BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("com.potatoepet.AdvancedCompany", Flags:BepInDependency.DependencyFlags.SoftDependency)]
@@ -85,7 +83,6 @@ namespace LobbyControl
         
         private static readonly MethodInfo BeginSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__beginSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
         private static readonly MethodInfo EndSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__endSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
-        private static readonly int[] BaseUnlockables = {7,8,15,16};
 
         internal static class PluginConfig
         {
