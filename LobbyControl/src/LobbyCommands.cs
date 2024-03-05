@@ -387,16 +387,17 @@ Extra:
                             startOfRound.suitsPlaced = 0;
                             //try reload the save file
                             startOfRound.SetTimeAndPlanetToSavedSettings();
-                            startOfRound.LoadUnlockables();
+                            
+                            LobbyControl.ReloadUnlockables();
                             startOfRound.StartCoroutine(LobbyControl.LoadItemsCoroutine());
-                            terminal.Start();
-                            //sync the new values
+                            
                             startOfRound.SetMapScreenInfoToCurrentLevel();
-                            if (startOfRound.connectedPlayersAmount > 1)
+                            terminal.Start();
+                            
+                            //sync the new values
+                            if (startOfRound.connectedPlayersAmount >= 1)
                             {
                                 LobbyControl.RefreshLobby();
-                                startOfRound.SyncShipUnlockablesServerRpc();
-                                startOfRound.SyncSuitsServerRpc();
                             }
                             LobbyControl.AutoSaveEnabled = LobbyControl.CanSave = ES3.Load("LC_SavingMethod",
                                 GameNetworkManager.Instance.currentSaveFileName, true);

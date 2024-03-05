@@ -107,27 +107,23 @@ namespace LobbyControl.Patches
             }
         }
 
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.Start))]
-        private static void ObjectLoad(GrabbableObject __instance, ref object[] __state)
-        {
-            __state = new object[] { __instance.itemProperties.itemSpawnsOnGround };
-
-            if (!LobbyControl.PluginConfig.CupBoard.Enabled.Value)
-                return;
-
-            if (__instance.isInShipRoom) 
-                __instance.itemProperties.itemSpawnsOnGround = !NoGravityObjects.Remove(__instance);
-        }
-
         [HarmonyPostfix]
         [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.Start))]
-        private static void ObjectLoad2(GrabbableObject __instance, object[] __state, bool __runOriginal)
+        private static void ObjectLoad2(GrabbableObject __instance, bool __runOriginal)
         {
             if (!LobbyControl.PluginConfig.CupBoard.Enabled.Value)
                 return;
-
-            __instance.itemProperties.itemSpawnsOnGround = (bool)__state[0];
+            
+            if (!__runOriginal)
+                return;
+            
+            if (!NoGravityObjects.Remove(__instance))
+                return;
+            
+            __instance.fallTime = 1f;
+            __instance.hasHitGround = true;
+            __instance.reachedFloorTarget = true;
+            __instance.targetFloorPosition = __instance.transform.localPosition;
         }
 
         [HarmonyPrefix]

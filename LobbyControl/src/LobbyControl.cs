@@ -85,6 +85,7 @@ namespace LobbyControl
         
         private static readonly MethodInfo BeginSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__beginSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
         private static readonly MethodInfo EndSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__endSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
+        private static readonly int[] BaseUnlockables = {7,8,15,16};
 
         internal static class PluginConfig
         {
@@ -107,9 +108,9 @@ namespace LobbyControl
                 Radar.RemoveOnShip = config.Bind("Radar","ship_loot",true
                     ,"remove orphan radar icons from scrap on the ship in a recently created game");
                 //GhostItems
-                GhostItems.Enabled = config.Bind("GhostItems","enabled",false
+                GhostItems.Enabled = config.Bind("GhostItems","enabled",true
                     ,"prevent the creation of non-grabbable items in case of inventory desync");
-                GhostItems.ForceDrop = config.Bind("GhostItems","force_drop",false
+                GhostItems.ForceDrop = config.Bind("GhostItems","force_drop",true
                     ,"forcefully drop all items of the player causing the desync");
                 //ItemClipping
                 ItemClipping.Enabled = config.Bind("ItemClipping","enabled",true
@@ -195,8 +196,83 @@ namespace LobbyControl
 
         public static IEnumerator LoadItemsCoroutine()
         {
-            yield return new WaitForSeconds(2);
+            yield return new WaitForSeconds(1);
             StartOfRound.Instance.LoadShipGrabbableItems();
+        }
+        // ReSharper disable Unity.PerformanceAnalysis
+        public static void ReloadUnlockables()
+        {
+            StartOfRound startOfRound = StartOfRound.Instance;
+            startOfRound.LoadUnlockables();
+            try
+            {
+                //7 - closet
+                //8 - cabinet
+                //15 - beds
+                //16 - terminal
+                for (var baseUnlockable = 0; baseUnlockable < startOfRound.unlockablesList.unlockables.Count; baseUnlockable++)
+                {
+                    var unlockable = startOfRound.unlockablesList.unlockables[baseUnlockable];
+                    if (unlockable.alreadyUnlocked && !startOfRound.SpawnedShipUnlockables.ContainsKey(baseUnlockable) &&
+                        !unlockable.inStorage)
+                    {
+                        startOfRound.SpawnUnlockable(baseUnlockable);
+                        PlaceableShipObject shipObject = startOfRound.SpawnedShipUnlockables[baseUnlockable]
+                            .GetComponent<PlaceableShipObject>();
+                        if (!shipObject)
+                            shipObject = startOfRound.SpawnedShipUnlockables[baseUnlockable]
+                                .GetComponentInChildren<PlaceableShipObject>();
+                        var parentObject = shipObject.parentObject;
+                        if (parentObject != null)
+                        {
+                            var offset = parentObject.positionOffset;
+                            var localOffset = startOfRound.elevatorTransform.TransformPoint(offset);
+                            var position = shipObject.mainMesh.transform.position;
+                            var placementPosition = localOffset -
+                                                    (shipObject.parentObject.transform.position - position) -
+                                                    (position - shipObject.placeObjectCollider.transform.position);
+                            unlockable.placedPosition = placementPosition;
+                            var rotation = Quaternion.Euler(parentObject.rotationOffset);
+                            var step1 = rotation * Quaternion.Inverse(parentObject.transform.rotation);
+                            var step2 = step1 * shipObject.mainMesh.transform.rotation;
+                            var placementRotation = step2.eulerAngles;
+                            unlockable.placedRotation = placementRotation;
+                        }
+                    }
+                }
+
+                if (startOfRound.connectedPlayersAmount >= 1)
+                {
+                    List<ulong> rpcList = startOfRound.ClientPlayerList.Keys.ToList();
+
+                    ClientRpcParams clientRpcParams = new ClientRpcParams()
+                    {
+                        Send = new ClientRpcSendParams()
+                        {
+                            TargetClientIds = rpcList,
+                        },
+                    };
+
+                    for (var baseUnlockable = 0; baseUnlockable < startOfRound.unlockablesList.unlockables.Count; baseUnlockable++)
+                    {
+                        var unlockable = startOfRound.unlockablesList.unlockables[baseUnlockable];
+                        if (unlockable.alreadyUnlocked && !unlockable.inStorage)
+                        {
+                            FastBufferWriter bufferWriter = (FastBufferWriter)BeginSendClientRpc.Invoke(startOfRound,
+                                new object[] { 1076853239U, clientRpcParams, RpcDelivery.Reliable });
+                            BytePacker.WriteValueBitPacked(bufferWriter, baseUnlockable);
+                            EndSendClientRpc.Invoke(startOfRound,
+                                new object[] { bufferWriter, 1076853239U, clientRpcParams, RpcDelivery.Reliable });
+                        }
+                    }
+
+                    startOfRound.SyncShipUnlockablesServerRpc();
+                }
+            }
+            catch (Exception ex)
+            {
+                LobbyControl.Log.LogError(ex);
+            }
         }
 
         public static void RefreshLobby()
