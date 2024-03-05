@@ -59,7 +59,7 @@ namespace LobbyControl.Patches
             if (!flag)
             {
                 LobbyControl.Log.LogError(
-                    $"Grab invalidated for {controllerB.playerUsername} out of inventory space! ( use lobby dropall to fix )");
+                    $"Grab invalidated for {controllerB.playerUsername} out of inventory space!{(LobbyControl.PluginConfig.GhostItems.ForceDrop.Value?"":" ( use lobby dropall to fix )")}");
                 HUDManager.Instance.AddTextToChatOnServer($"{controllerB.playerUsername} is out of inventory space!");
                 if (LobbyControl.PluginConfig.GhostItems.ForceDrop.Value)
                     controllerB.DropAllHeldItemsServerRpc();
@@ -67,6 +67,33 @@ namespace LobbyControl.Patches
             else
                 LobbyControl.Log.LogInfo($"Grab validated for {controllerB.playerUsername}!");
             return flag;
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.ThrowObjectServerRpc))]
+        private static void CheckForGhostThrownObject(PlayerControllerB __instance, NetworkObjectReference grabbedObject)
+        {
+            if (!StartOfRound.Instance.IsServer)
+                return;
+            
+            if (!LobbyControl.PluginConfig.GhostItems.Enabled.Value)
+                return;
+            
+            if (!grabbedObject.TryGet(out NetworkObject networkObject))
+                return;
+
+            if (!networkObject.TryGetComponent<GrabbableObject>(out var component))
+                return;
+            
+            if(component == __instance.currentlyHeldObject)
+                return;
+            
+            if (!LobbyControl.PluginConfig.GhostItems.ForceDrop.Value)
+                return;
+            
+            LobbyControl.Log.LogWarning($"{__instance.playerUsername} is throwing an object he is not holding. Attempting re-sync!");
+            __instance.DropAllHeldItemsServerRpc();
+            
         }
         
     }
