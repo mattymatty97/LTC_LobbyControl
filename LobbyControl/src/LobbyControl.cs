@@ -104,11 +104,15 @@ namespace LobbyControl
                     ,"remove orphan radar icons from deleted scrap ( company building )");
                 Radar.RemoveOnShip = config.Bind("Radar","ship_loot",true
                     ,"remove orphan radar icons from scrap on the ship in a recently created game");
-                //GhostItems
-                GhostItems.Enabled = config.Bind("GhostItems","enabled",true
+                //ItemSync
+                ItemSync.GhostItems = config.Bind("ItemSync","ghost_items",true
                     ,"prevent the creation of non-grabbable items in case of inventory desync");
-                GhostItems.ForceDrop = config.Bind("GhostItems","force_drop",true
+                ItemSync.ForceDrop = config.Bind("ItemSync","force_drop",true
                     ,"forcefully drop all items of the player causing the desync");
+                ItemSync.MultipleDrop = config.Bind("ItemSync","shotgun_reload",true
+                    ,"prevent slot-desync when dropping the same item multiple times");
+                ItemSync.ShotGunReload = config.Bind("ItemSync","shotgun_reload",true
+                    ,"prevent the shotgun disappearing when reloading it");
                 //ItemClipping
                 ItemClipping.Enabled = config.Bind("ItemClipping","enabled",true
                     ,"fix rotation and height of various items when on the Ground");
@@ -169,10 +173,12 @@ namespace LobbyControl
                 internal static ConfigEntry<bool> RemoveOnShip;
             }
             
-            internal static class GhostItems
+            internal static class ItemSync
             {
-                internal static ConfigEntry<bool> Enabled;
+                internal static ConfigEntry<bool> GhostItems;
                 internal static ConfigEntry<bool> ForceDrop;
+                internal static ConfigEntry<bool> MultipleDrop;
+                internal static ConfigEntry<bool> ShotGunReload;
             }
             
             internal static class ItemClipping
@@ -208,13 +214,58 @@ namespace LobbyControl
             }
         }
 
-        public static IEnumerator LoadItemsCoroutine()
-        {
-            yield return new WaitForSeconds(1);
-            StartOfRound.Instance.LoadShipGrabbableItems();
-        }
         // ReSharper disable Unity.PerformanceAnalysis
-        public static void ReloadUnlockables()
+        internal static IEnumerator LoadLobbyCoroutine()
+        {
+            var startOfRound = StartOfRound.Instance;
+            var terminal = Object.FindObjectOfType<Terminal>();
+            //remove all items
+            startOfRound.ResetShipFurniture();
+            startOfRound.ResetPooledObjects(true);
+            //remove remaining unlockables
+            foreach (var unlockable in StartOfRound.Instance.SpawnedShipUnlockables.ToList())
+            {
+                var itemEntry = startOfRound.unlockablesList.unlockables[unlockable.Key];
+                if (!itemEntry.alreadyUnlocked || !itemEntry.spawnPrefab) 
+                    continue;
+                                
+                if(unlockable.Value == null)
+                    continue;
+                                
+                NetworkObject component = unlockable.Value.GetComponent<NetworkObject>();
+                if (component != null && component.IsSpawned)
+                    component.Despawn();
+            }
+            startOfRound.SpawnedShipUnlockables.Clear();
+            startOfRound.suitsPlaced = 0;
+            //wait
+            yield return new WaitForSeconds(0.2f);
+            //read new misc data
+            startOfRound.SetTimeAndPlanetToSavedSettings();
+            startOfRound.SetMapScreenInfoToCurrentLevel();
+            //restart the terminal
+            terminal.Start();
+            //if there are any players
+            if (startOfRound.connectedPlayersAmount >= 1)
+            {
+                //send the updated misc variables to the players
+                RefreshLobby();
+            }   
+            //spawn the new unlockables and update their position
+            ReloadUnlockables();
+            yield return new WaitForSeconds(0.2f);
+            //spawn new items
+            startOfRound.LoadShipGrabbableItems();
+            yield return new WaitForSeconds(0.1f);
+            //if there are any players
+            if (startOfRound.connectedPlayersAmount >= 1)
+            {
+                //sync item variables
+                startOfRound.SyncShipUnlockablesServerRpc();
+            }
+        }
+        
+        internal static void ReloadUnlockables()
         {
             StartOfRound startOfRound = StartOfRound.Instance;
             startOfRound.LoadUnlockables();
@@ -289,7 +340,7 @@ namespace LobbyControl
             }
         }
 
-        public static void RefreshLobby()
+        internal static void RefreshLobby()
         {
             var startOfRound = StartOfRound.Instance;
             List<ulong> ulongList = new List<ulong>();

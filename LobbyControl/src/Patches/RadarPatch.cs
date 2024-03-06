@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using System.Collections.Generic;
+using HarmonyLib;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -10,6 +11,7 @@ namespace LobbyControl.Patches
         [HarmonyPatch]
         internal class NewShipItemPatch
         {
+            private static readonly HashSet<GrabbableObject> UpdatableObjects = new HashSet<GrabbableObject>();
             [HarmonyPrefix]
             [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.Start))]
             private static void TrackNew(GrabbableObject __instance)
@@ -21,18 +23,16 @@ namespace LobbyControl.Patches
                 if (!__instance.transform.IsChildOf(StartOfRound.Instance.elevatorTransform))
                     return;
 
-                Traverse.Create(__instance).Field<bool>("_LCRadarUpdate").Value = true;
+                UpdatableObjects.Add(__instance);
             }
 
             [HarmonyPostfix]
             [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.Update))]
+            [HarmonyPriority(0)]
             private static void UpdatePatch(GrabbableObject __instance, bool __runOriginal)
             {
-                Traverse<bool> shouldUpdate = Traverse.Create(__instance).Field<bool>("_LCRadarUpdate");
-                if (!__runOriginal || !shouldUpdate.Value)
+                if (!__runOriginal || !UpdatableObjects.Remove(__instance))
                     return;
-
-                shouldUpdate.Value = false;
 
                 if (__instance.radarIcon != null && __instance.radarIcon.gameObject != null)
                     Object.Destroy(__instance.radarIcon.gameObject);

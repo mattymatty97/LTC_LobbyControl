@@ -278,7 +278,7 @@
         <Compile Include="src\LobbyCommands.cs" />
         <Compile Include="src\LobbyControl.cs" />
         <Compile Include="src\Patches\CupBoardFix.cs" />
-        <Compile Include="src\Patches\GhostItemFix.cs" />
+        <Compile Include="src\Patches\ItemSyncPatches.cs" />
         <Compile Include="src\Patches\ItemClippingPatch.cs" />
         <Compile Include="src\Patches\LimitPatcher.cs" />
         <Compile Include="src\Patches\LobbyPatcher.cs" />

@@ -367,41 +367,7 @@ Extra:
 
                         if (ES3.FileExists(manager.currentSaveFileName))
                         {
-                            var startOfRound = StartOfRound.Instance;
-                            var terminal = Object.FindObjectOfType<Terminal>();
-                            //remove all items
-                            startOfRound.ResetShipFurniture();
-                            startOfRound.ResetPooledObjects(true);
-                            //remove remaining unlockables
-                            foreach (var unlockable in StartOfRound.Instance.SpawnedShipUnlockables.ToList())
-                            {
-                                var itemEntry = startOfRound.unlockablesList.unlockables[unlockable.Key];
-                                if (!itemEntry.alreadyUnlocked || !itemEntry.spawnPrefab) 
-                                    continue;
-                                
-                                if(unlockable.Value == null)
-                                    continue;
-                                
-                                NetworkObject component = unlockable.Value.GetComponent<NetworkObject>();
-                                if (component != null && component.IsSpawned)
-                                    component.Despawn();
-                            }
-                            startOfRound.SpawnedShipUnlockables.Clear();
-                            startOfRound.suitsPlaced = 0;
-                            //try reload the save file
-                            startOfRound.SetTimeAndPlanetToSavedSettings();
-                            
-                            LobbyControl.ReloadUnlockables();
-                            startOfRound.StartCoroutine(LobbyControl.LoadItemsCoroutine());
-                            
-                            startOfRound.SetMapScreenInfoToCurrentLevel();
-                            terminal.Start();
-                            
-                            //sync the new values
-                            if (startOfRound.connectedPlayersAmount >= 1)
-                            {
-                                LobbyControl.RefreshLobby();
-                            }
+                            StartOfRound.Instance.StartCoroutine(LobbyControl.LoadLobbyCoroutine());
                             LobbyControl.AutoSaveEnabled = LobbyControl.CanSave = ES3.Load("LC_SavingMethod",
                                 GameNetworkManager.Instance.currentSaveFileName, true);
                             LobbyControl.Log.LogInfo(outText);
