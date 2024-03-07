@@ -109,10 +109,8 @@ namespace LobbyControl
                     ,"prevent the creation of non-grabbable items in case of inventory desync");
                 ItemSync.ForceDrop = config.Bind("ItemSync","force_drop",true
                     ,"forcefully drop all items of the player causing the desync");
-                ItemSync.MultipleDrop = config.Bind("ItemSync","shotgun_reload",true
-                    ,"prevent slot-desync when dropping the same item multiple times");
-                ItemSync.ShotGunReload = config.Bind("ItemSync","shotgun_reload",true
-                    ,"prevent the shotgun disappearing when reloading it");
+                ItemSync.ForceSyncSlot = config.Bind("ItemSync","force_sync",true
+                    ,"forcefully tell clients which slot they are using when grabbing items");
                 //ItemClipping
                 ItemClipping.Enabled = config.Bind("ItemClipping","enabled",true
                     ,"fix rotation and height of various items when on the Ground");
@@ -177,8 +175,7 @@ namespace LobbyControl
             {
                 internal static ConfigEntry<bool> GhostItems;
                 internal static ConfigEntry<bool> ForceDrop;
-                internal static ConfigEntry<bool> MultipleDrop;
-                internal static ConfigEntry<bool> ShotGunReload;
+                internal static ConfigEntry<bool> ForceSyncSlot;
             }
             
             internal static class ItemClipping

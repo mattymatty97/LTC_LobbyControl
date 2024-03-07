@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Reflection.Emit;
 using GameNetcodeStuff;
 using HarmonyLib;
@@ -19,7 +20,8 @@ namespace LobbyControl.Patches
             {
                 List<CodeInstruction> codes = instructions.ToList();
 
-                var info = typeof(ItemSyncPatches.GhostItemPatches).GetMethod(nameof(ItemSyncPatches.GhostItemPatches.CheckGrab));
+                var info = typeof(ItemSyncPatches.GhostItemPatches).GetMethod(nameof(ItemSyncPatches.GhostItemPatches
+                    .CheckGrab));
 
                 for (var i = 0; i < codes.Count; i++)
                 {
@@ -69,114 +71,110 @@ namespace LobbyControl.Patches
 
                 return flag;
             }
-            
         }
 
         [HarmonyPatch]
         internal class ShotgunPatches
         {
-            [HarmonyPrefix]
-            [HarmonyPatch(typeof(ShotgunItem), nameof(ShotgunItem.ReloadGunEffectsServerRpc))]
-            private static void UseCorrectSlot(ShotgunItem __instance)
-            {
-                NetworkManager networkManager = __instance.NetworkManager;
-                if (networkManager == null || !networkManager.IsListening)
-                    return;
-                if (__instance.__rpc_exec_stage != NetworkBehaviour.__RpcExecStage.Server ||
-                    !networkManager.IsServer && !networkManager.IsHost)
-                    return;
-
-                if (!LobbyControl.PluginConfig.ItemSync.ShotGunReload.Value)
-                    return;
-
-                if (__instance.playerHeldBy == null ||
-                    __instance.playerHeldBy.currentlyHeldObjectServer == __instance)
-                    return;
-
-                LobbyControl.Log.LogWarning(
-                    $"{__instance.playerHeldBy.playerUsername} is reloading a shotgun he is not holding! attempting re-sync!");
-                HeldSlotPatch.UpdateQueue.Add(__instance.playerHeldBy);
-            }
         }
-        
+
         [HarmonyPatch]
-        internal class HeldSlotPatch{
-            internal static readonly HashSet<PlayerControllerB> UpdateQueue = new HashSet<PlayerControllerB>();
+        internal class HeldSlotPatch
+        {
+            private static readonly MethodInfo BeginSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__beginSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
+            private static readonly MethodInfo EndSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__endSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
+
             
-            [HarmonyPrefix]
-            [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.ThrowObjectClientRpc))]
-            private static void UseCorrectSlot(PlayerControllerB __instance, 
-                NetworkObjectReference grabbedObject)
+            [HarmonyPostfix]
+            [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.GrabObjectClientRpc))]
+            private static void SyncNewlyHeldObject(PlayerControllerB __instance)
             {
                 NetworkManager networkManager = __instance.NetworkManager;
                 if (networkManager == null || !networkManager.IsListening)
                     return;
-                if (__instance.__rpc_exec_stage != NetworkBehaviour.__RpcExecStage.Client || !networkManager.IsClient && !networkManager.IsHost)
+                if (__instance.__rpc_exec_stage != NetworkBehaviour.__RpcExecStage.Client ||
+                    !networkManager.IsClient && !networkManager.IsHost)
                     return;
-                if (!LobbyControl.PluginConfig.ItemSync.MultipleDrop.Value)
+                if (__instance.IsLocalPlayer)
                     return;
-                if (!grabbedObject.TryGet(out var networkObject))
+                if (!LobbyControl.PluginConfig.ItemSync.ForceSyncSlot.Value)
                     return;
-                if (!networkObject.TryGetComponent<GrabbableObject>(out var component))
+
+                GrabbableObject[] objectsByType = __instance.ItemSlots;
+                List<NetworkObjectReference> networkObjectReferenceList = new List<NetworkObjectReference>();
+                List<int> intList1 = new List<int>();
+                List<int> intList2 = new List<int>();
+                List<int> intList3 = new List<int>();
+                for (int index1 = 0; index1 < objectsByType.Length; ++index1)
+                {
+                    if (objectsByType[index1] is null || __instance.currentItemSlot != index1)
+                        continue;
+                    
+                    intList1.Add((int)__instance.playerClientId);
+                    networkObjectReferenceList.Add((NetworkObjectReference)objectsByType[index1].NetworkObject);
+                    intList2.Add(index1);
+
+                    if (objectsByType[index1].isPocketed)
+                    {
+                        intList3.Add(networkObjectReferenceList.Count - 1);
+                    }
+                }
+
+                ClientRpcParams clientRpcParams = new ClientRpcParams
+                {
+                    Send = new ClientRpcSendParams
+                    {
+                        TargetClientIds = new []{__instance.actualClientId}
+                    }
+                };
+
+                if (networkObjectReferenceList.Count <= 0)
                     return;
-                if (component != __instance.currentlyHeldObjectServer)
-                    UpdateQueue.Add(__instance);
-            }            
+
+                SkipOnce.Add(__instance.actualClientId);
+                // this.SyncAlreadyHeldObjectsClientRpc(networkObjectReferenceList.ToArray(), intList1.ToArray(), intList2.ToArray(), intList3.ToArray(), joiningClientId);
+                var gObjects = networkObjectReferenceList.ToArray();
+                var playersHeldBy = intList1.ToArray();
+                var itemSlotNumbers = intList2.ToArray();
+                var isObjectPocketed = intList3.ToArray();
+                var syncWithClient = __instance.playerClientId;
+                
+                FastBufferWriter bufferWriter = (FastBufferWriter)BeginSendClientRpc.Invoke(StartOfRound.Instance, new object[]{1613265729U, clientRpcParams, RpcDelivery.Reliable});
+                bufferWriter.WriteValueSafe(true);
+                bufferWriter.WriteValueSafe(gObjects);
+                bufferWriter.WriteValueSafe(true);
+                bufferWriter.WriteValueSafe(playersHeldBy);
+                bufferWriter.WriteValueSafe(true);
+                bufferWriter.WriteValueSafe(itemSlotNumbers);
+                bufferWriter.WriteValueSafe(true);
+                bufferWriter.WriteValueSafe(isObjectPocketed);
+                BytePacker.WriteValueBitPacked(bufferWriter, syncWithClient);
+                EndSendClientRpc.Invoke(StartOfRound.Instance, new object[]{bufferWriter, 1613265729U, clientRpcParams, RpcDelivery.Reliable});
+            }
             
             private static readonly HashSet<ulong> SkipOnce = new HashSet<ulong>();
-            private static bool _flag = false;
-            
-            [HarmonyPrefix]
-            [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.Update))]
-            private static void UpdateSlots(PlayerControllerB __instance)
-            {
-                if (!StartOfRound.Instance.IsServer)
-                    return;
-                if (!UpdateQueue.Remove(__instance))
-                    return;
-                LobbyControl.Log.LogWarning($"{__instance.playerUsername} might have been desynced! forcing re-sync.");
-                _flag = true;
-                StartOfRound.Instance.SyncAlreadyHeldObjectsServerRpc((int)__instance.actualClientId);
-                _flag = false;
-                SkipOnce.Add(__instance.actualClientId);
-            }
             
             [HarmonyPrefix]
             [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.__rpc_handler_744998938))]
-            private static void DoNotRespawn(
+            private static bool DoNotRespawn(
                 NetworkBehaviour target,
                 __RpcParams rpcParams)
             {
                 StartOfRound __instance = (StartOfRound)target;
                 if (!__instance.IsServer)
-                    return;
+                    return true;
                 if (!SkipOnce.Remove(rpcParams.Server.Receive.SenderClientId))
-                    return;
+                    return true;
                 LobbyControl.Log.LogDebug($"Skipping SyncShipUnlockablesServerRpc by {__instance.allPlayerScripts[__instance.ClientPlayerList[rpcParams.Server.Receive.SenderClientId]].playerUsername}.");
-                _flag = true;
-            }           
-            
-            [HarmonyPostfix]
-            [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.__rpc_handler_744998938))]
-            private static void ResetDoNotRespawn()
-            {
-                 _flag = false;
-            }
+                return false;
+            } 
             
             [HarmonyPrefix]
-            [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.SyncShipUnlockablesServerRpc))]
-            private static bool DoNotSync(StartOfRound __instance, bool __runOriginal)
+            [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnPlayerDC))]
+            private static void ClearIfDC(ulong clientId)
             {
-                NetworkManager networkManager = __instance.NetworkManager;
-                if (networkManager == null || !networkManager.IsListening)
-                    return __runOriginal;
-                if (__instance.__rpc_exec_stage != NetworkBehaviour.__RpcExecStage.Server || !networkManager.IsServer && !networkManager.IsHost)
-                    return __runOriginal;
-                if (!_flag)
-                    return __runOriginal;
-                LobbyControl.Log.LogDebug("SyncShipUnlockablesServerRpc skipped");
-                return false;
-            }   
+                SkipOnce.Remove(clientId);
+            } 
         }
     }
 }
