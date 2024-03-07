@@ -109,8 +109,14 @@ namespace LobbyControl
                     ,"prevent the creation of non-grabbable items in case of inventory desync");
                 ItemSync.ForceDrop = config.Bind("ItemSync","force_drop",true
                     ,"forcefully drop all items of the player causing the desync");
-                ItemSync.ForceSyncSlot = config.Bind("ItemSync","force_sync",true
-                    ,"forcefully tell clients which slot they are using when grabbing items");
+                ItemSync.ShotGunReload = config.Bind("ItemSync","shotgun_reload",true
+                    ,"prevent the shotgun disappearing when reloading it");
+                ItemSync.SyncOnUse = config.Bind("ItemSync","sync_on_use",false
+                    ,"sync held object upon usage");
+                ItemSync.SyncOnInteract = config.Bind("ItemSync","sync_on_interact",false
+                    ,"sync held object upon interaction");
+                ItemSync.SyncIgnoreBattery = config.Bind("ItemSync","sync_ignore_battery",true
+                    ,"ignore battery powered items (compatibility with flashlight toggle mods)");
                 //ItemClipping
                 ItemClipping.Enabled = config.Bind("ItemClipping","enabled",true
                     ,"fix rotation and height of various items when on the Ground");
@@ -175,7 +181,10 @@ namespace LobbyControl
             {
                 internal static ConfigEntry<bool> GhostItems;
                 internal static ConfigEntry<bool> ForceDrop;
-                internal static ConfigEntry<bool> ForceSyncSlot;
+                internal static ConfigEntry<bool> ShotGunReload;
+                internal static ConfigEntry<bool> SyncOnUse;
+                internal static ConfigEntry<bool> SyncOnInteract;
+                internal static ConfigEntry<bool> SyncIgnoreBattery;
             }
             
             internal static class ItemClipping

@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Reflection.Emit;
 using GameNetcodeStuff;
 using HarmonyLib;
@@ -72,54 +71,42 @@ namespace LobbyControl.Patches
                 return flag;
             }
         }
-
+        
         [HarmonyPatch]
-        internal class ShotgunPatches
+        internal class ShotgunPatch
         {
-        }
-
-        [HarmonyPatch]
-        internal class HeldSlotPatch
-        {
-            private static readonly MethodInfo BeginSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__beginSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
-            private static readonly MethodInfo EndSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__endSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
-
-            
-            [HarmonyPostfix]
-            [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.GrabObjectClientRpc))]
-            private static void SyncNewlyHeldObject(PlayerControllerB __instance)
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.DestroyItemInSlotServerRpc))]
+            private static bool CheckDestroy(PlayerControllerB __instance, int itemSlot)
             {
                 NetworkManager networkManager = __instance.NetworkManager;
                 if (networkManager == null || !networkManager.IsListening)
-                    return;
-                if (__instance.__rpc_exec_stage != NetworkBehaviour.__RpcExecStage.Client ||
-                    !networkManager.IsClient && !networkManager.IsHost)
-                    return;
-                if (__instance.IsLocalPlayer)
-                    return;
-                if (!LobbyControl.PluginConfig.ItemSync.ForceSyncSlot.Value)
-                    return;
+                    return true;
+                if (__instance.__rpc_exec_stage != NetworkBehaviour.__RpcExecStage.Server || !networkManager.IsServer && !networkManager.IsHost)
+                    return true;
+                if (!LobbyControl.PluginConfig.ItemSync.ShotGunReload.Value)
+                    return true;
 
-                GrabbableObject[] objectsByType = __instance.ItemSlots;
-                List<NetworkObjectReference> networkObjectReferenceList = new List<NetworkObjectReference>();
-                List<int> intList1 = new List<int>();
-                List<int> intList2 = new List<int>();
-                List<int> intList3 = new List<int>();
-                for (int index1 = 0; index1 < objectsByType.Length; ++index1)
+                var actualSlugSlot = -1;
+                var shotgunSlot = -1;
+                foreach (var item in __instance.ItemSlots)
                 {
-                    if (objectsByType[index1] is null || __instance.currentItemSlot != index1)
-                        continue;
-                    
-                    intList1.Add((int)__instance.playerClientId);
-                    networkObjectReferenceList.Add((NetworkObjectReference)objectsByType[index1].NetworkObject);
-                    intList2.Add(index1);
-
-                    if (objectsByType[index1].isPocketed)
+                    shotgunSlot++;
+                    var shotgun = item as ShotgunItem;
+                    if (shotgun != null && shotgun.isReloading)
                     {
-                        intList3.Add(networkObjectReferenceList.Count - 1);
+                        actualSlugSlot = shotgun.FindAmmoInInventory();
+                        break;
                     }
                 }
 
+                if (actualSlugSlot == -1 || actualSlugSlot == itemSlot)
+                    return true;
+                
+                LobbyControl.Log.LogWarning($"{__instance.playerUsername} was found de-synced while reloading shotgun! attempting sync.");
+                __instance.SwitchToItemSlot(shotgunSlot);
+                
+                //give the client the same slot back
                 ClientRpcParams clientRpcParams = new ClientRpcParams
                 {
                     Send = new ClientRpcSendParams
@@ -127,54 +114,101 @@ namespace LobbyControl.Patches
                         TargetClientIds = new []{__instance.actualClientId}
                     }
                 };
-
-                if (networkObjectReferenceList.Count <= 0)
-                    return;
-
-                SkipOnce.Add(__instance.actualClientId);
-                // this.SyncAlreadyHeldObjectsClientRpc(networkObjectReferenceList.ToArray(), intList1.ToArray(), intList2.ToArray(), intList3.ToArray(), joiningClientId);
-                var gObjects = networkObjectReferenceList.ToArray();
-                var playersHeldBy = intList1.ToArray();
-                var itemSlotNumbers = intList2.ToArray();
-                var isObjectPocketed = intList3.ToArray();
-                var syncWithClient = __instance.playerClientId;
+                FastBufferWriter bufferWriter = __instance.__beginSendClientRpc(899109231U, clientRpcParams, RpcDelivery.Reliable);
+                BytePacker.WriteValueBitPacked(bufferWriter, itemSlot);
+                __instance.__endSendClientRpc(ref bufferWriter, 899109231U, clientRpcParams, RpcDelivery.Reliable);
                 
-                FastBufferWriter bufferWriter = (FastBufferWriter)BeginSendClientRpc.Invoke(StartOfRound.Instance, new object[]{1613265729U, clientRpcParams, RpcDelivery.Reliable});
-                bufferWriter.WriteValueSafe(true);
-                bufferWriter.WriteValueSafe(gObjects);
-                bufferWriter.WriteValueSafe(true);
-                bufferWriter.WriteValueSafe(playersHeldBy);
-                bufferWriter.WriteValueSafe(true);
-                bufferWriter.WriteValueSafe(itemSlotNumbers);
-                bufferWriter.WriteValueSafe(true);
-                bufferWriter.WriteValueSafe(isObjectPocketed);
-                BytePacker.WriteValueBitPacked(bufferWriter, syncWithClient);
-                EndSendClientRpc.Invoke(StartOfRound.Instance, new object[]{bufferWriter, 1613265729U, clientRpcParams, RpcDelivery.Reliable});
+                //tell ourselves the right id and do not update the other clients
+                ClientRpcParams clientRpcParams2 = new ClientRpcParams
+                {
+                    Send = new ClientRpcSendParams
+                    {
+                        TargetClientIds = new []{NetworkManager.Singleton.LocalClientId}
+                    }
+                };
+                FastBufferWriter bufferWriter2 = __instance.__beginSendClientRpc(899109231U, clientRpcParams2, RpcDelivery.Reliable);
+                BytePacker.WriteValueBitPacked(bufferWriter2, actualSlugSlot);
+                __instance.__endSendClientRpc(ref bufferWriter2, 899109231U, clientRpcParams2, RpcDelivery.Reliable);
+                
+                return false;
             }
             
-            private static readonly HashSet<ulong> SkipOnce = new HashSet<ulong>();
-            
-            [HarmonyPrefix]
-            [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.__rpc_handler_744998938))]
-            private static bool DoNotRespawn(
-                NetworkBehaviour target,
-                __RpcParams rpcParams)
-            {
-                StartOfRound __instance = (StartOfRound)target;
-                if (!__instance.IsServer)
-                    return true;
-                if (!SkipOnce.Remove(rpcParams.Server.Receive.SenderClientId))
-                    return true;
-                LobbyControl.Log.LogDebug($"Skipping SyncShipUnlockablesServerRpc by {__instance.allPlayerScripts[__instance.ClientPlayerList[rpcParams.Server.Receive.SenderClientId]].playerUsername}.");
-                return false;
-            } 
-            
-            [HarmonyPrefix]
-            [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnPlayerDC))]
-            private static void ClearIfDC(ulong clientId)
-            {
-                SkipOnce.Remove(clientId);
-            } 
         }
+        
+        [HarmonyPatch]
+        internal class GenericUsablePatch
+        {
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.ActivateItemClientRpc))]
+            private static void CheckUse(GrabbableObject __instance)
+            {
+                NetworkManager networkManager = __instance.NetworkManager;
+                if (networkManager == null || !networkManager.IsListening)
+                    return;
+                if (__instance.__rpc_exec_stage != NetworkBehaviour.__RpcExecStage.Client || !networkManager.IsClient && !networkManager.IsHost || __instance.IsOwner)
+                    return;
+                if (!LobbyControl.PluginConfig.ItemSync.SyncOnUse.Value)
+                    return;
+                if(__instance.itemProperties.requiresBattery && LobbyControl.PluginConfig.ItemSync.SyncIgnoreBattery.Value)
+                    return;
+
+                if (__instance == __instance.playerHeldBy.currentlyHeldObjectServer)
+                    return;
+                
+                var itemSlot = -1;
+                for (var i=0; i < __instance.playerHeldBy.ItemSlots.Length; i++)
+                {
+                    var item = __instance.playerHeldBy.ItemSlots[i];
+                    if (item == __instance)
+                    {
+                        itemSlot = i;
+                        break;
+                    }
+                }
+
+                if (itemSlot == -1)
+                    return;
+                
+                LobbyControl.Log.LogWarning($"{__instance.playerHeldBy.playerUsername} was found de-synced while using an item! attempting sync.");
+                __instance.playerHeldBy.SwitchToItemSlot(itemSlot);
+            }
+            
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.InteractLeftRightClientRpc))]
+            private static void CheckInteract(GrabbableObject __instance)
+            {
+                NetworkManager networkManager = __instance.NetworkManager;
+                if (networkManager == null || !networkManager.IsListening)
+                    return;
+                if (__instance.__rpc_exec_stage != NetworkBehaviour.__RpcExecStage.Client || !networkManager.IsClient && !networkManager.IsHost || __instance.IsOwner)
+                    return;
+                if (!LobbyControl.PluginConfig.ItemSync.SyncOnInteract.Value)
+                    return;
+                if(__instance.itemProperties.requiresBattery && LobbyControl.PluginConfig.ItemSync.SyncIgnoreBattery.Value)
+                    return;
+
+                if (__instance == __instance.playerHeldBy.currentlyHeldObject)
+                    return;
+                
+                var itemSlot = -1;
+                for (var i=0; i < __instance.playerHeldBy.ItemSlots.Length; i++)
+                {
+                    var item = __instance.playerHeldBy.ItemSlots[i];
+                    if (item == __instance)
+                    {
+                        itemSlot = i;
+                        break;
+                    }
+                }
+
+                if (itemSlot == -1)
+                    return;
+                
+                LobbyControl.Log.LogWarning($"{__instance.playerHeldBy.playerUsername} was found de-synced while interacting with an item! attempting sync.");
+                __instance.playerHeldBy.SwitchToItemSlot(itemSlot);
+            }
+            
+        }
+        
     }
 }
