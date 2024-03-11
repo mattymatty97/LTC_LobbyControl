@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Reflection.Emit;
 using GameNetcodeStuff;
 using HarmonyLib;
@@ -10,44 +12,86 @@ namespace LobbyControl.Patches
     [HarmonyPatch]
     public class ItemSyncPatches
     {
+        
         [HarmonyPatch]
         internal class GhostItemPatches
         {
+            
+            [HarmonyFinalizer]
+            [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.GrabObjectServerRpc))]
+            private static Exception CheckOverflow(PlayerControllerB __instance, Exception __exception, NetworkObjectReference grabbedObject)
+            {
+                if (__exception != null)
+                {
+                    __instance.GrabObjectClientRpc(false, grabbedObject);
+                }
+                
+                return __exception;
+            }
+            
             [HarmonyTranspiler]
             [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.GrabObjectServerRpc))]
             private static IEnumerable<CodeInstruction> CheckOverflow(IEnumerable<CodeInstruction> instructions)
             {
                 List<CodeInstruction> codes = instructions.ToList();
-
-                var info = typeof(ItemSyncPatches.GhostItemPatches).GetMethod(nameof(ItemSyncPatches.GhostItemPatches
-                    .CheckGrab));
+                
+                var heldByInfo = typeof(GrabbableObject).GetField(nameof(GrabbableObject.heldByPlayerOnServer));
+                
+                var checkGrabInfo = typeof(ItemSyncPatches.GhostItemPatches).GetMethod(nameof(ItemSyncPatches.GhostItemPatches
+                    .CheckGrab), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Instance);
+                var checkOwnershipInfo = typeof(ItemSyncPatches.GhostItemPatches).GetMethod(nameof(ItemSyncPatches.GhostItemPatches
+                    .CheckOwnership), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Instance);
 
                 for (var i = 0; i < codes.Count; i++)
                 {
-                    if (!codes[i].IsLdarga())
-                        continue;
-
-                    if (!codes[i - 1].IsStloc())
-                        continue;
-
-                    codes[i - 3] = new CodeInstruction(OpCodes.Ldarg_0)
+                    if (codes[i].IsLdarga())
                     {
-                        labels = codes[i - 3].labels,
-                        blocks = codes[i - 3].blocks
-                    };
-                    codes[i - 2] = new CodeInstruction(OpCodes.Call, info)
+                        if (!codes[i - 1].IsStloc())
+                            continue;
+
+                        codes[i - 3] = new CodeInstruction(OpCodes.Ldarg_0)
+                        {
+                            labels = codes[i - 3].labels,
+                            blocks = codes[i - 3].blocks
+                        };
+                        codes[i - 2] = new CodeInstruction(OpCodes.Call, checkGrabInfo)
+                        {
+                            labels = codes[i - 2].labels,
+                            blocks = codes[i - 2].blocks
+                        };
+                        LobbyControl.Log.LogDebug("Patched GrabObjectServerRpc 1!!");
+                    }
+
+                    if (codes[i].LoadsField(heldByInfo))
                     {
-                        labels = codes[i - 2].labels,
-                        blocks = codes[i - 2].blocks
-                    };
-                    LobbyControl.Log.LogDebug("Patched GrabObjectServerRpc!!");
-                    break;
+                        codes[i - 1] =
+                            new CodeInstruction(OpCodes.Ldarg_0)
+                            {
+                                labels = codes[i - 1].labels,
+                                blocks = codes[i - 1].blocks
+                            };
+                        codes[i] =
+                            new CodeInstruction(OpCodes.Call, checkOwnershipInfo)
+                            {
+                                labels = codes[i].labels,
+                                blocks = codes[i].blocks
+                            };
+                        
+                        LobbyControl.Log.LogDebug("Patched GrabObjectServerRpc 2!!");
+                    }
                 }
 
                 return codes;
             }
 
-            public static bool CheckGrab(PlayerControllerB controllerB)
+            private static bool CheckOwnership(NetworkObject gNetworkObject, PlayerControllerB instance)
+            {
+                var flag = LobbyControl.PluginConfig.ItemSync.GhostItems.Value;
+                var grabbable = gNetworkObject.GetComponentInChildren<GrabbableObject>();
+                return grabbable.heldByPlayerOnServer && (!flag || grabbable.playerHeldBy != instance);
+            }
+
+            private static bool CheckGrab(PlayerControllerB controllerB)
             {
                 if (!LobbyControl.PluginConfig.ItemSync.GhostItems.Value)
                     return true;

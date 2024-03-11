@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using BepInEx;
+using GameNetcodeStuff;
 using LethalAPI.TerminalCommands.Attributes;
 using LethalAPI.TerminalCommands.Models;
 using LobbyControl.Patches;
@@ -48,7 +50,7 @@ Extra:
         }
 
         [TerminalCommand("Lobby")]
-        [CommandInfo("Controls the Lobby status", "[command] (lobby name)")]
+        [CommandInfo("type lobby help for more info", "[command] (lobby name)")]
         [AllowedCaller(AllowedCaller.Host)]
         public TerminalNode Lobby([RemainingText] string text)
         {
@@ -390,13 +392,17 @@ Extra:
 
                         var outText = "Player names Reloaded";
 
-                        foreach (var playerScript in StartOfRound.Instance.allPlayerScripts)
+                        var localController = StartOfRound.Instance.localPlayerController;
+                        var scripts = StartOfRound.Instance.allPlayerScripts;
+                        List<ulong> ulongList = new List<ulong>();
+                        foreach (var script in scripts)
                         {
-                            if (!playerScript.IsOwnedByServer)
-                            {
-                                playerScript.SendNewPlayerValuesServerRpc(playerScript.playerSteamId);
-                            }
+                            if (script.IsOwnedByServer && localController != script )
+                                ulongList.Add(0L);
+                            else
+                                ulongList.Add(script.playerSteamId);
                         }
+                        localController.SendNewPlayerValuesClientRpc(ulongList.ToArray());
 
                         node.displayText = outText;
                         node.maxCharactersToType = node.displayText.Length + 2;

@@ -288,6 +288,7 @@
         <Compile Include="src\Patches\RadarPatch.cs" />
         <Compile Include="src\Patches\SavePatches.cs" />
         <Compile Include="src\Patches\TransparentPlayerFix.cs" />
+        <Compile Include="src\Patches\WallPlayerFix.cs" />
         <Compile Include="src\Properties\AssemblyInfo.cs" />
     </ItemGroup>
     <ItemGroup>
@@ -300,8 +301,6 @@
     <ItemGroup>
         <PackageReference Include="HarmonyX" Version="2.5.5"/>
         <PackageReference Include="Mono.Cecil" Version="0.11.4"/>
-        <PackageReference Include="MonoMod.RuntimeDetour" Version="21.12.13.1"/>
-        <PackageReference Include="MonoMod.Utils" Version="21.12.13.1"/>
     </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets"/>
     <Import Project="..\packages\BepInEx.Core.5.4.21\build\BepInEx.Core.targets" Condition="Exists('..\packages\BepInEx.Core.5.4.21\build\BepInEx.Core.targets')"/>

@@ -40,10 +40,17 @@ Patches:
   - **fix items from a newly created lobby being visible on the radar**
 - ### InvisibleManFix
   - **fix for late joining player being invisible if the previous owner of the body disconnected while dead**
-- ### GhostItemFix
+- ### ItemSyncFix
   - prevent clients with **extra inventory** from generating unpickable items
+  - fix **shotguns disappearing** if client reloads while de-synced
 - ### OutOfBounds Patch
   - prevent items from falling **below of the ship**
+- ### JoinQueue:
+  - process incoming connections as a queue to prevent two clients connecting at the same time
+- ### LogSpam:
+  - fix the causes of some spammy error messages
+    - stop **CalculatePolygonPath** when enemies die
+    - fix lightning particles (**ZeroSurfaceArea**)
 - ### Others:
   - Prevent host crashes when an extra player tries to join when the lobby is already full but the last player has not finished joining 
 

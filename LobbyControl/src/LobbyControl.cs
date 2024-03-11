@@ -14,7 +14,6 @@ using UnityEngine;
 using Object = UnityEngine.Object;
 using PluginInfo = BepInEx.PluginInfo;
 
-
 namespace LobbyControl
 {
     [BepInPlugin(GUID, NAME, VERSION)]
@@ -149,6 +148,11 @@ namespace LobbyControl
                     ,"use sphere shape for lightning particles ( this also makes them more visible on all items )");
                 LogSpam.AudioSpacializer = config.Bind("LogSpam","zero_surface_area",true
                     ,"WIP");
+                //JoinQueue
+                JoinQueue.Enabled = config.Bind("JoinQueue","enabled",true
+                    ,"handle joining players as a queue instead of at the same time");
+                JoinQueue.ConnectionTimeout = config.Bind("JoinQueue","connection_timeout_ms",30000UL
+                    ,"After how much time discard a hanging connection");
 
                 //remove unused options
                 PropertyInfo orphanedEntriesProp = config.GetType().GetProperty("OrphanedEntries", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -217,6 +221,12 @@ namespace LobbyControl
                 internal static ConfigEntry<bool> CalculatePolygonPath;
                 internal static ConfigEntry<bool> ZeroSurfaceArea;
                 internal static ConfigEntry<bool> AudioSpacializer;
+            }
+            
+            internal static class JoinQueue
+            {
+                internal static ConfigEntry<bool> Enabled;
+                internal static ConfigEntry<ulong> ConnectionTimeout;
             }
         }
 

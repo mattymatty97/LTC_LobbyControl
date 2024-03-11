@@ -11,7 +11,7 @@
         <ThunderStoreItems Include="..\manifest.json"/>
         <ThunderStoreItems Include="..\README.md"/>
         <ThunderStoreItems Include="..\CHANGELOG.md"/>
-        <ThunderStoreItems Include="..\Dependencies/LethalAPI.TerminalCommands.dll"/>
+        <ThunderStoreItems Include="..\Dependencies\LethalAPI.TerminalCommands.dll"/>
     </ItemGroup>
     <!-- Defining the reference files that have to be publicized. -->
     <ItemGroup>
@@ -47,7 +47,7 @@
     </Target>
     <PropertyGroup>
         <!-- The mod directory to install our mod to. -->
-        <ModDirectory>$(GameDirectory)\BepInEx\plugins\mattymatty-$(AssemblyName)</ModDirectory>
+        <ModDirectory>$(GameDirectory)\BepInEx\plugins\0-$(AssemblyName)</ModDirectory>
         <!-- Where to create the temporary directory for creating the release zip files. -->
         <TempZipDir>$(OutputPath)ZipMeUp</TempZipDir>
         <!-- The internal structure of the zip file. -->

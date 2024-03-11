@@ -70,6 +70,15 @@ namespace LobbyControl.Patches
         }
 
         [HarmonyPrefix]
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.StartGame))]
+        private static void MemoizeDeadline(StartOfRound __instance)
+        {
+            _timeUntilDeadline = (int)TimeOfDay.Instance.timeUntilDeadline;
+        }
+
+        private static int _timeUntilDeadline = 3;
+        
+        [HarmonyPrefix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.unloadSceneForAllPlayers))]
         private static void RespawnDcPlayer(StartOfRound __instance)
         {
@@ -118,7 +127,7 @@ namespace LobbyControl.Patches
                 var serverMoneyAmount = Object.FindObjectOfType<Terminal>().groupCredits;
                 var profitQuota = TimeOfDay.Instance.profitQuota;
                 var quotaFulfilled = TimeOfDay.Instance.quotaFulfilled;
-                var timeUntilDeadline = (int)TimeOfDay.Instance.timeUntilDeadline;
+                var timeUntilDeadline = _timeUntilDeadline;
                 var levelID = __instance.currentLevelID;
                 var connectedPlayers = __instance.connectedPlayersAmount;
                 var randomSeed = __instance.randomMapSeed;
