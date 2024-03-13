@@ -8,8 +8,7 @@ using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
-using LethalAPI.LibTerminal;
-using LethalAPI.LibTerminal.Models;
+using LethalAPI.TerminalCommands.Models;
 using LobbyControl.PopUp;
 using Unity.Netcode;
 using UnityEngine;
@@ -45,7 +44,7 @@ namespace LobbyControl
             "com.potatoepet.AdvancedCompany"
         };
 
-        internal static readonly List<PluginInfo> foundIncompatibilities = new List<PluginInfo>();
+        internal static readonly List<PluginInfo> FoundIncompatibilities = new List<PluginInfo>();
             
         private void Awake()
         {
@@ -55,7 +54,7 @@ namespace LobbyControl
                 PluginInfo[] incompatibleMods = Chainloader.PluginInfos.Values.Where(p => IncompatibleGUIDs.Contains(p.Metadata.GUID)).ToArray();
                 if (incompatibleMods.Length > 0)
                 {    
-                    foundIncompatibilities.AddRange(incompatibleMods);
+                    FoundIncompatibilities.AddRange(incompatibleMods);
                     foreach (var mod in incompatibleMods)
                     {
                         Log.LogWarning($"{mod.Metadata.Name} is incompatible!");   

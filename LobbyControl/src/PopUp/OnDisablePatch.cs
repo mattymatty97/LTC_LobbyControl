@@ -12,7 +12,7 @@ namespace LobbyControl.PopUp
         [HarmonyPatch(typeof(MenuManager), nameof(MenuManager.Awake))]
         private static void AddPopup(MenuManager __instance)
         {
-            if (LobbyControl.foundIncompatibilities.Count <= 0) 
+            if (LobbyControl.FoundIncompatibilities.Count <= 0) 
                 return;
             
             var menuContainer = GameObject.Find("/Canvas/MenuContainer/");
@@ -30,7 +30,7 @@ namespace LobbyControl.PopUp
             var text = textHolder.GetComponent<TextMeshProUGUI>();
             LobbyControl.Log.LogWarning("Changing text!");
             StringBuilder sb = new StringBuilder("LOBBY CONTROL was DISABLED!\nIncompatible:");
-            foreach (var plugin in LobbyControl.foundIncompatibilities)
+            foreach (var plugin in LobbyControl.FoundIncompatibilities)
             {
                 sb.Append("\n").Append(plugin.Metadata.Name);
             }

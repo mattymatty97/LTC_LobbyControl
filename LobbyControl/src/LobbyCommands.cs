@@ -1,14 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using BepInEx;
-using GameNetcodeStuff;
-using LethalAPI.LibTerminal.Attributes;
-using LethalAPI.LibTerminal.Models;
-using LethalAPI.LibTerminal.Models.Enums;
+using LethalAPI.TerminalCommands.Attributes;
+using LethalAPI.TerminalCommands.Models;
 using LobbyControl.Patches;
-using Unity.Netcode;
 using UnityEngine;
 using Object = UnityEngine.Object;
 // ReSharper disable MemberCanBePrivate.Global
