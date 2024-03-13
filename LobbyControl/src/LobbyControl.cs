@@ -8,7 +8,9 @@ using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
-using LethalAPI.TerminalCommands.Models;
+using LethalAPI.LibTerminal;
+using LethalAPI.LibTerminal.Models;
+using LobbyControl.PopUp;
 using Unity.Netcode;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -16,6 +18,7 @@ using PluginInfo = BepInEx.PluginInfo;
 
 namespace LobbyControl
 {
+    [BepInDependency("LethalAPI.Terminal", Flags:BepInDependency.DependencyFlags.HardDependency)]
     [BepInPlugin(GUID, NAME, VERSION)]
     [BepInDependency("com.github.tinyhoot.ShipLobby", Flags:BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("twig.latecompany", Flags:BepInDependency.DependencyFlags.SoftDependency)]
@@ -24,7 +27,7 @@ namespace LobbyControl
     {
         public const string GUID = "mattymatty.LobbyControl";
         public const string NAME = "LobbyControl";
-        public const string VERSION = "2.3.0.rc1";
+        public const string VERSION = "2.3.0.9";
 
         internal static ManualLogSource Log;
 
@@ -42,6 +45,8 @@ namespace LobbyControl
             "com.potatoepet.AdvancedCompany"
         };
 
+        internal static readonly List<PluginInfo> foundIncompatibilities = new List<PluginInfo>();
+            
         private void Awake()
         {
             Log = Logger;
@@ -49,12 +54,15 @@ namespace LobbyControl
             {
                 PluginInfo[] incompatibleMods = Chainloader.PluginInfos.Values.Where(p => IncompatibleGUIDs.Contains(p.Metadata.GUID)).ToArray();
                 if (incompatibleMods.Length > 0)
-                {                    
+                {    
+                    foundIncompatibilities.AddRange(incompatibleMods);
                     foreach (var mod in incompatibleMods)
                     {
                         Log.LogWarning($"{mod.Metadata.Name} is incompatible!");   
                     }
                     Log.LogError($"{incompatibleMods.Length} incompatible mods found! Disabling!");
+                    var harmony = new Harmony(GUID);
+                    harmony.PatchAll(typeof(OnDisablePatch));
                 }
                 else
                 {
@@ -146,8 +154,8 @@ namespace LobbyControl
                     ,"stop pathfinding for dead Enemies");
                 LogSpam.ZeroSurfaceArea = config.Bind("LogSpam","zero_surface_area",true
                     ,"use sphere shape for lightning particles ( this also makes them more visible on all items )");
-                LogSpam.AudioSpacializer = config.Bind("LogSpam","zero_surface_area",true
-                    ,"WIP");
+                LogSpam.MoreCompany = config.Bind("LogSpam","more_company",true
+                    ,"Remove some leftover Exceptions caused by MoreCompany");
                 //JoinQueue
                 JoinQueue.Enabled = config.Bind("JoinQueue","enabled",true
                     ,"handle joining players as a queue instead of at the same time");
@@ -220,7 +228,7 @@ namespace LobbyControl
                 internal static ConfigEntry<bool> Enabled;
                 internal static ConfigEntry<bool> CalculatePolygonPath;
                 internal static ConfigEntry<bool> ZeroSurfaceArea;
-                internal static ConfigEntry<bool> AudioSpacializer;
+                internal static ConfigEntry<bool> MoreCompany;
             }
             
             internal static class JoinQueue

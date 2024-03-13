@@ -1,7 +1,8 @@
-﻿using System.Linq;
+﻿using System;
 using HarmonyLib;
 using Unity.Netcode;
 using UnityEngine;
+using LogLevel = BepInEx.Logging.LogLevel;
 
 namespace LobbyControl.Patches
 {
@@ -89,5 +90,24 @@ namespace LobbyControl.Patches
             }
         }
         
+        [HarmonyPatch]
+        internal class MoreCompanyPatches
+        {
+            [HarmonyFinalizer]
+            [HarmonyPatch(typeof(HUDManager), nameof(HUDManager.AddPlayerChatMessageClientRpc))]
+            private static Exception CatchChatExceptions(Exception __exception)
+            {
+                if (LobbyControl.PluginConfig.LogSpam.Enabled.Value && 
+                    LobbyControl.PluginConfig.LogSpam.MoreCompany.Value && 
+                    __exception is IndexOutOfRangeException)
+                {
+                    LobbyControl.Log.LogDebug("Suppressed Exception from MoreCompany");
+                    LobbyControl.Log.Log(LogLevel.All, __exception);
+                    return null;
+                }
+
+                return __exception;
+            }
+        }
     }
 }
