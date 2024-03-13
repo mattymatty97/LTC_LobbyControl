@@ -101,8 +101,8 @@ namespace LobbyControl.Patches
                     LobbyControl.PluginConfig.LogSpam.MoreCompany.Value && 
                     __exception is IndexOutOfRangeException)
                 {
-                    LobbyControl.Log.LogDebug("Suppressed Exception from MoreCompany");
-                    LobbyControl.Log.Log(LogLevel.All, __exception);
+                    LobbyControl.Log.LogWarning("Suppressed Exception from MoreCompany");
+                    LobbyControl.Log.LogDebug(__exception);
                     return null;
                 }
 

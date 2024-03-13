@@ -10,10 +10,10 @@ namespace LobbyControl.Patches
         ///     Write the AutoSave status to the SaveFile
         /// </summary>
         [HarmonyPrefix]
-        [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.SaveGame))]
+        [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.SaveGameValues))]
         private static bool PreventSave(GameNetworkManager __instance)
         {
-            if (LobbyControl.CanSave)
+            if (LobbyControl.CanSave && __instance.isHostingGame)
                 ES3.Save("LC_SavingMethod", LobbyControl.AutoSaveEnabled, __instance.currentSaveFileName);
 
             return LobbyControl.CanSave;
