@@ -1,9 +1,10 @@
 {
   "name": "LobbyControl",
-  "version_number": "2.3.0",
+  "version_number": "2.3.0.rc1",
   "website_url": "https://github.com/mattymatty97/LTC_LobbyControl",
   "description": "A collection of Patches for Lethal Company with Quality of life changes for the Host.",
   "dependencies": [
-    "BepInEx-BepInExPack-5.4.2100"
+    "BepInEx-BepInExPack-5.4.2100",
+    "LethalAPI-LethalAPI_Terminal-1.0.0"
   ]
 }

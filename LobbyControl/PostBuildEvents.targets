@@ -27,9 +27,10 @@
         <!-- clean referencing -->
         <Reference Include="..\Dependencies\Unity.TextMeshPro.dll" Publicize="false"/>
         <Reference Include="..\Dependencies\LethalAPI.TerminalCommands.dll" Publicize="false"/>
-    </ItemGroup>
-    
-    <!-- Ensure the user (you!) has actually set everything up properly. -->
+        <!--<Reference Include="..\Dependencies\LethalAPI.Terminal.dll" Publicize="false"/>-->
+</ItemGroup>
+
+<!-- Ensure the user (you!) has actually set everything up properly. -->
     <Target Name="EnsureGameDirectoryDefined" BeforeTargets="PrepareForBuild">
         <PropertyGroup>
             <GameDirError>This project requires you to define your own game installation directory in a separate $(GameDirTargetsFile) file. Create this file in the same folder as the $(MSBuildProjectFile) and add a 'GameDirectory' MSBuild property to it to proceed. There is an example file in $(MSBuildThisFileDirectory) you can copy and adjust.</GameDirError>

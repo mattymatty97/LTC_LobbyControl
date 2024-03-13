@@ -53,8 +53,7 @@ namespace LobbyControl.Patches
         
         private static void OnClientConnectWrapper(StartOfRound startOfRound, ulong playerUUID)
         {
-            
-            if (!LobbyControl.PluginConfig.JoinQueue.Enabled.Value)
+            if (!startOfRound.IsServer || !LobbyControl.PluginConfig.JoinQueue.Enabled.Value)
                 startOfRound.OnClientConnect(playerUUID);
             else
             {
@@ -75,6 +74,9 @@ namespace LobbyControl.Patches
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.Singleton_OnClientDisconnectCallback))]
         private static void OnClientDisconnect(ulong clientId)
         {
+            if (!StartOfRound.Instance.IsServer)
+                return;
+            
             LobbyControl.Log.LogInfo($"{clientId} disconnected");
             ConnectionQueue.Remove(clientId);
             if (_currentConnectingPlayer == clientId)
@@ -86,6 +88,9 @@ namespace LobbyControl.Patches
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.__rpc_handler_682230258))]
         private static void ClientConnectionCompleted(__RpcParams rpcParams)
         {
+            if (!StartOfRound.Instance.IsServer)
+                return;
+            
             var clientId = rpcParams.Server.Receive.SenderClientId;
             if (ConnectionQueue.Remove(clientId))
                 LobbyControl.Log.LogInfo($"{clientId} is now connected");
@@ -99,13 +104,23 @@ namespace LobbyControl.Patches
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.LateUpdate))]
         private static void ProcessConnectionQueue(StartOfRound __instance)
         {
+            if (!StartOfRound.Instance.IsServer)
+                return;
+            
             if (_currentConnectingPlayer != null)
             {
                 if ((ulong)DateTimeOffset.Now.ToUnixTimeMilliseconds() < _currentConnectingExpiration)
                     return;
                 
                 LobbyControl.Log.LogWarning($"Connection to {_currentConnectingPlayer} expired, Disonnecting!");
-                NetworkManager.Singleton.DisconnectClient(_currentConnectingPlayer.Value);
+                try
+                {
+                    NetworkManager.Singleton.DisconnectClient(_currentConnectingPlayer.Value);
+                }
+                catch (Exception ex)
+                {
+                    LobbyControl.Log.LogError(ex);
+                }
                 ConnectionQueue.Remove(_currentConnectingPlayer.Value);
                 _currentConnectingPlayer = null;
             }
@@ -117,8 +132,14 @@ namespace LobbyControl.Patches
             _currentConnectingExpiration = (ulong)DateTimeOffset.Now.ToUnixTimeMilliseconds() + LobbyControl.PluginConfig.JoinQueue.ConnectionTimeout.Value;
             
             LobbyControl.Log.LogInfo($"Started processing {clientId} connection");
-            
-            __instance.OnClientConnect(clientId);
+            try
+            {
+                __instance.OnClientConnect(clientId);                
+            }
+            catch (Exception ex)
+            {
+                LobbyControl.Log.LogError(ex);
+            }
         }
         
     }
