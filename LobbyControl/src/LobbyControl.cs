@@ -8,8 +8,9 @@ using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
-using LethalAPI.TerminalCommands.Models;
+//using LethalAPI.TerminalCommands.Models;
 using LobbyControl.PopUp;
+using LobbyControl.TerminalCommands;
 using Unity.Netcode;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -17,7 +18,7 @@ using PluginInfo = BepInEx.PluginInfo;
 
 namespace LobbyControl
 {
-    [BepInDependency("LethalAPI.Terminal", Flags:BepInDependency.DependencyFlags.HardDependency)]
+    //[BepInDependency("LethalAPI.Terminal", Flags:BepInDependency.DependencyFlags.HardDependency)]
     [BepInPlugin(GUID, NAME, VERSION)]
     [BepInDependency("com.github.tinyhoot.ShipLobby", Flags:BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("twig.latecompany", Flags:BepInDependency.DependencyFlags.SoftDependency)]
@@ -26,7 +27,7 @@ namespace LobbyControl
     {
         public const string GUID = "mattymatty.LobbyControl";
         public const string NAME = "LobbyControl";
-        public const string VERSION = "2.3.0.10";
+        public const string VERSION = "2.3.0.11";
 
         internal static ManualLogSource Log;
 
@@ -35,7 +36,7 @@ namespace LobbyControl
         public static bool CanSave = true;
         public static bool AutoSaveEnabled = true;
 
-        private TerminalModRegistry _commands;
+        //private TerminalModRegistry _commands;
 
         private static readonly string[] IncompatibleGUIDs = new string[]
         {
@@ -69,9 +70,11 @@ namespace LobbyControl
 
                     PluginConfig.Init(this);
 
-                    Log.LogInfo("Registering Commands");
+                    /*Log.LogInfo("Registering Commands");
                     _commands = TerminalRegistry.CreateTerminalRegistry();
-                    _commands.RegisterFrom<LobbyCommands>();
+                    _commands.RegisterFrom<LobbyCommands>();*/
+                    
+                    CommandManager.Initialize();
                     
                     Log.LogInfo("Patching Methods");
                     var harmony = new Harmony(GUID);

@@ -2,17 +2,13 @@
 using System.Collections.Generic;
 using System.Text;
 using BepInEx;
-using LethalAPI.TerminalCommands.Attributes;
-using LethalAPI.TerminalCommands.Models;
 using LobbyControl.Patches;
 using UnityEngine;
 using Object = UnityEngine.Object;
-// ReSharper disable MemberCanBePrivate.Global
-// ReSharper disable MemberCanBeMadeStatic.Global
 
-namespace LobbyControl
+namespace LobbyControl.TerminalCommands
 {
-    public class LobbyCommands
+    public class LobbyCommand: Command
     {
         private const string DefaultText = @"
 - status        : prints the current lobby status
@@ -34,42 +30,30 @@ Extra:
 - namefix       : refresh player names for the entire lobby
 - dropall       : force all players to drop their inventory
 ";
-
-        [TerminalCommand("Lobby")]
-        [AllowedCaller(AllowedCaller.Host)]
-        public TerminalNode Lobby()
+        
+        public override bool IsCommand(string[] args)
         {
-            var node = ScriptableObject.CreateInstance<TerminalNode>();
-            node.displayText = "Invalid command:" + DefaultText;
-            node.clearPreviousText = true;
-            node.maxCharactersToType = node.displayText.Length + 2;
-            return node;
+            return GameNetworkManager.Instance.isHostingGame && args[0].Trim().ToLower() == "lobby";
         }
 
-        [TerminalCommand("Lobby")]
-        [CommandInfo("type lobby help for more info", "[command] (lobby name)")]
-        [AllowedCaller(AllowedCaller.Host)]
-        public TerminalNode Lobby([RemainingText] string text)
+        public override TerminalNode Execute(string[] args)
         {
             var node = ScriptableObject.CreateInstance<TerminalNode>();
             try
             {
-                if (text.IsNullOrWhiteSpace())
+                if (args[1].IsNullOrWhiteSpace())
                     return Lobby();
 
-                var sub = text.Trim().Split()[0].Trim().ToLower();
-                var remaining = text.Substring(sub.Length).Trim();
+                var command = args[1];
 
-                LobbyControl.Log.LogInfo("Command is " + text + "|" + sub + "|" + remaining);
-
-                switch (sub)
+                switch (command)
                 {
                     case "status":
                     {
                         var manager = GameNetworkManager.Instance;
                         if (!manager.currentLobby.HasValue)
                         {
-                            node.displayText = "Failed to fetch lobby ( was null )";
+                            node.displayText = "Failed to fetch lobby ( was null )\n\n";
                             break;
                         }
 
@@ -85,6 +69,7 @@ Extra:
                         builder.Append("\n- Status is ").Append(status ? "Open" : "Closed");
                         builder.Append("\n- Visibility is ").Append(visibility.ToString());
                         builder.Append("\n- Saving is ").Append(autoSave ? "Automatic" : "Manual");
+                        builder.Append("\n\n");
                         node.displayText = builder.ToString();
                         node.maxCharactersToType = node.displayText.Length + 2;
                         break;
@@ -96,7 +81,7 @@ Extra:
                         
                         if (!LobbyControl.CanModifyLobby)
                         {
-                            node.displayText = "Lobby cannot be changed at the moment";
+                            node.displayText = "Lobby cannot be changed at the moment\n\n";
                             break;
                         }
 
@@ -104,7 +89,7 @@ Extra:
                         var manager = GameNetworkManager.Instance;
                         if (!manager.currentLobby.HasValue)
                         {
-                            node.displayText = "Failed to fetch lobby ( was null )";
+                            node.displayText = "Failed to fetch lobby ( was null )\n\n";
                             break;
                         }
 
@@ -117,7 +102,7 @@ Extra:
 
                         LobbyControl.Log.LogInfo(outText);
 
-                        node.displayText = outText;
+                        node.displayText = outText + "\n\n";
                         node.maxCharactersToType = node.displayText.Length + 2;
                         break;
                     }
@@ -128,7 +113,7 @@ Extra:
                         
                         if (!LobbyControl.CanModifyLobby)
                         {
-                            node.displayText = "Lobby cannot be changed at the moment";
+                            node.displayText = "Lobby cannot be changed at the moment\n\n";
                             break;
                         }
 
@@ -136,7 +121,7 @@ Extra:
                         var manager = GameNetworkManager.Instance;
                         if (!manager.currentLobby.HasValue)
                         {
-                            node.displayText = "Failed to fetch lobby ( was null )";
+                            node.displayText = "Failed to fetch lobby ( was null )\n\n";
                             break;
                         }
 
@@ -149,7 +134,7 @@ Extra:
 
                         LobbyControl.Log.LogInfo(outText);
 
-                        node.displayText = outText;
+                        node.displayText = outText + "\n\n";
                         node.maxCharactersToType = node.displayText.Length + 2;
                         break;
                     }
@@ -160,7 +145,7 @@ Extra:
                         
                         if (!LobbyControl.CanModifyLobby)
                         {
-                            node.displayText = "Lobby cannot be changed at the moment";
+                            node.displayText = "Lobby cannot be changed at the moment\n\n";
                             break;
                         }
 
@@ -168,7 +153,7 @@ Extra:
                         var manager = GameNetworkManager.Instance;
                         if (!manager.currentLobby.HasValue)
                         {
-                            node.displayText = "Failed to fetch lobby ( was null )";
+                            node.displayText = "Failed to fetch lobby ( was null )\n\n";
                             break;
                         }
 
@@ -176,7 +161,7 @@ Extra:
 
                         var outText = "Lobby is now Private";
                         LobbyControl.Log.LogInfo(outText);
-                        node.displayText = outText;
+                        node.displayText = outText + "\n\n";
                         node.maxCharactersToType = node.displayText.Length + 2;
                         break;
                     }
@@ -187,7 +172,7 @@ Extra:
                         
                         if (!LobbyControl.CanModifyLobby)
                         {
-                            node.displayText = "Lobby cannot be changed at the moment";
+                            node.displayText = "Lobby cannot be changed at the moment\n\n";
                             break;
                         }
 
@@ -195,7 +180,7 @@ Extra:
                         var manager = GameNetworkManager.Instance;
                         if (!manager.currentLobby.HasValue)
                         {
-                            node.displayText = "Failed to fetch lobby ( was null )";
+                            node.displayText = "Failed to fetch lobby ( was null )\n\n";
                             break;
                         }
 
@@ -204,7 +189,7 @@ Extra:
 
                         var outText = "Lobby is now Friends Only";
                         LobbyControl.Log.LogInfo(outText);
-                        node.displayText = outText;
+                        node.displayText = outText + "\n\n";
                         node.maxCharactersToType = node.displayText.Length + 2;
                         break;
                     }
@@ -215,7 +200,7 @@ Extra:
                         
                         if (!LobbyControl.CanModifyLobby)
                         {
-                            node.displayText = "Lobby cannot be changed at the moment";
+                            node.displayText = "Lobby cannot be changed at the moment\n\n";
                             break;
                         }
 
@@ -223,7 +208,7 @@ Extra:
                         var manager = GameNetworkManager.Instance;
                         if (!manager.currentLobby.HasValue)
                         {
-                            node.displayText = "Failed to fetch lobby ( was null )";
+                            node.displayText = "Failed to fetch lobby ( was null )\n\n";
                             break;
                         }
 
@@ -231,7 +216,7 @@ Extra:
                         var outText = "Lobby is now Public";
                         LobbyControl.Log.LogInfo(outText);
 
-                        node.displayText = outText;
+                        node.displayText = outText + "\n\n";
                         node.maxCharactersToType = node.displayText.Length + 2;
                         break;
                     }
@@ -240,18 +225,19 @@ Extra:
                         if (PerformOrbitCheck(node, out var errorText)) 
                             return errorText;
                         
-                        if (remaining.IsNullOrWhiteSpace())
+                        if (args[2].IsNullOrWhiteSpace())
                         {
-                            node.displayText = "Lobby name cannot be null";
+                            node.displayText = "Lobby name cannot be null\n\n";
                             break;
                         }
 
                         if (!LobbyControl.CanModifyLobby)
                         {
-                            node.displayText = "Lobby cannot be changed at the moment";
+                            node.displayText = "Lobby cannot be changed at the moment\n\n";
                             break;
                         }
 
+                        var remaining = args[2];
                         if (remaining.Length > 40)
                             remaining = remaining.Substring(0, 40);
 
@@ -259,7 +245,7 @@ Extra:
                         var manager = GameNetworkManager.Instance;
                         if (!manager.currentLobby.HasValue)
                         {
-                            node.displayText = "Failed to fetch lobby ( was null )";
+                            node.displayText = "Failed to fetch lobby ( was null )\n\n";
                             break;
                         }
 
@@ -272,7 +258,7 @@ Extra:
                         var outText = "Lobby renamed to \"" + remaining + "\"";
                         LobbyControl.Log.LogInfo(outText);
 
-                        node.displayText = outText;
+                        node.displayText = outText + "\n\n";
                         node.maxCharactersToType = node.displayText.Length + 2;
                         break;
                     }
@@ -286,7 +272,7 @@ Extra:
 
                         LobbyControl.Log.LogInfo(outText);
 
-                        node.displayText = outText;
+                        node.displayText = outText + "\n\n";
                         node.maxCharactersToType = node.displayText.Length + 2;
                         break;
                     }
@@ -297,22 +283,23 @@ Extra:
                         
                         if (!LobbyControl.CanModifyLobby)
                         {
-                            node.displayText = "Lobby cannot be saved at the moment";
+                            node.displayText = "Lobby cannot be saved at the moment\n\n";
                             break;
                         }
 
                         if (StartOfRound.Instance.isChallengeFile)
                         {
-                            node.displayText = "Cannot Edit Challenge Save";
-                            return node;
+                            node.displayText = "Cannot Edit Challenge Save\n\n";
+                            break;
                         }
 
                         LobbyControl.Log.LogDebug("Saving Lobby");
                         var manager = GameNetworkManager.Instance;
 
                         var oldSaveFileName = manager.currentSaveFileName;
-                        if (!remaining.IsNullOrWhiteSpace())
+                        if (!args[2].IsNullOrWhiteSpace())
                         {
+                            var remaining = args[2];
                             if (remaining.Length > 20)
                                 remaining = remaining.Substring(0, 20);
                             manager.currentSaveFileName = remaining;
@@ -330,7 +317,7 @@ Extra:
 
                         LobbyControl.Log.LogInfo(outText);
 
-                        node.displayText = outText;
+                        node.displayText = outText + "\n\n";
                         node.maxCharactersToType = node.displayText.Length + 2;
                         break;
                     }
@@ -341,22 +328,23 @@ Extra:
                         
                         if (!LobbyControl.CanModifyLobby)
                         {
-                            node.displayText = "Lobby cannot be modified at the moment";
+                            node.displayText = "Lobby cannot be modified at the moment\n\n";
                             break;
                         }
 
                         if (StartOfRound.Instance.isChallengeFile)
                         {
-                            node.displayText = "Cannot Edit Challenge Save";
-                            return node;
+                            node.displayText = "Cannot Edit Challenge Save\n\n";
+                            break;
                         }
 
                         LobbyControl.Log.LogDebug("Reloading Lobby");
                         var manager = GameNetworkManager.Instance;
 
                         var oldSaveFileName = manager.currentSaveFileName;
-                        if (!remaining.IsNullOrWhiteSpace())
+                        if (!args[2].IsNullOrWhiteSpace())
                         {
+                            var remaining = args[2];
                             if (remaining.Length > 20)
                                 remaining = remaining.Substring(0, 20);
                             manager.currentSaveFileName = remaining;
@@ -378,12 +366,18 @@ Extra:
                             manager.currentSaveFileName = oldSaveFileName;
                         }
 
-                        node.displayText = outText;
+                        node.displayText = outText + "\n\n";
                         node.maxCharactersToType = node.displayText.Length + 2;
                         break;
                     }
                     case "namefix":
                     {
+
+                        if (GameNetworkManager.Instance.disableSteam)
+                        {
+                            node.displayText = "Steam is Disabled!\n\n";
+                            break;
+                        }
                        
                         LobbyControl.Log.LogDebug("Fixing names");
 
@@ -394,14 +388,14 @@ Extra:
                         List<ulong> ulongList = new List<ulong>();
                         foreach (var script in scripts)
                         {
-                            if (script.IsOwnedByServer && localController != script )
+                            if (!script.isPlayerControlled && !script.isPlayerDead)
                                 ulongList.Add(0L);
                             else
                                 ulongList.Add(script.playerSteamId);
                         }
                         localController.SendNewPlayerValuesClientRpc(ulongList.ToArray());
 
-                        node.displayText = outText;
+                        node.displayText = outText + "\n\n";
                         node.maxCharactersToType = node.displayText.Length + 2;
                         break;
                     }
@@ -420,7 +414,7 @@ Extra:
                             playerScript.DropAllHeldItemsAndSync();
                         }
 
-                        node.displayText = outText;
+                        node.displayText = outText + "\n\n";
                         node.maxCharactersToType = node.displayText.Length + 2;
                         break;
                     }
@@ -438,26 +432,35 @@ Extra:
             }
             catch (Exception ex)
             {
-                LobbyControl.Log.LogError("Exception:\n" + ex);
-                node.displayText = "Exception!";
+                LobbyControl.Log.LogError("Exception:\n\n" + ex);
+                node.displayText = "Exception!\n\n";
             }
 
             return node;
-
-            bool PerformOrbitCheck(TerminalNode terminalNode, out TerminalNode errorText)
+        }
+        
+        bool PerformOrbitCheck(TerminalNode terminalNode, out TerminalNode errorText)
+        {
+            if (!StartOfRound.Instance.inShipPhase)
             {
-                if (!StartOfRound.Instance.inShipPhase)
+                terminalNode.displayText = "Can only be used while in Orbit\n\n";
                 {
-                    terminalNode.displayText = "Can only be used while in Orbit";
-                    {
-                        errorText = terminalNode;
-                        return true;
-                    }
+                    errorText = terminalNode;
+                    return true;
                 }
-
-                errorText = null;
-                return false;
             }
+
+            errorText = null;
+            return false;
+        }
+        
+        public TerminalNode Lobby()
+        {
+            var node = ScriptableObject.CreateInstance<TerminalNode>();
+            node.displayText = "Invalid command:" + DefaultText;
+            node.clearPreviousText = true;
+            node.maxCharactersToType = node.displayText.Length + 2;
+            return node;
         }
     }
 }

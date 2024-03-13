@@ -105,7 +105,13 @@ Installation
 
 Or use the mod manager to handle the installing for you.
 
+Terminal Code by
+-----------
+@felix_argyle_nya on discord  
+<@675902479245770810>  
+[GitHub](https://github.com/ZehsTeam) | [Thunderstore](https://thunderstore.io/c/lethal-company/p/Zehs/)
+
 Icon by
 -----------
-@pedro9006 on discord
+@pedro9006 on discord  
 <@464801863741734913>
