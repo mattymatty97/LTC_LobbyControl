@@ -53,9 +53,9 @@ namespace LobbyControl.Patches
 
         [HarmonyPrefix]
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.Singleton_OnClientDisconnectCallback))]
-        private static void OnClientDisconnect(ulong clientId)
+        private static void OnClientDisconnect(GameNetworkManager __instance, ulong clientId)
         {
-            if (!StartOfRound.Instance.IsServer)
+            if (!__instance.isHostingGame)
                 return;
             
             LobbyControl.Log.LogInfo($"{clientId} disconnected");
