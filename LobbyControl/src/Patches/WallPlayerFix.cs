@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Threading;
 using GameNetcodeStuff;
 using HarmonyLib;
 using Unity.Netcode;
@@ -29,6 +30,7 @@ namespace LobbyControl.Patches
         }
 
         private static readonly ConcurrentQueue<NetworkManager.ConnectionApprovalResponse> ConnectionQueue = new ConcurrentQueue<NetworkManager.ConnectionApprovalResponse>();
+        private static readonly object _lock = new object();
         private static ulong? _currentConnectingPlayer = null;
         private static ulong _currentConnectingExpiration = 0;
         private static bool[] _currentConnectingPlayerConfirmations = new bool[2];
@@ -37,12 +39,15 @@ namespace LobbyControl.Patches
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnClientConnect))]
         private static void OnClientConnect(StartOfRound __instance, ulong clientId)
         {
-            if (__instance.IsServer && LobbyControl.PluginConfig.JoinQueue.Enabled.Value)
+            lock (_lock)
             {
-                _currentConnectingPlayerConfirmations = new bool[2];
-                _currentConnectingPlayer = clientId;
-                _currentConnectingExpiration = (ulong)Environment.TickCount +
-                                               LobbyControl.PluginConfig.JoinQueue.ConnectionTimeout.Value;
+                if (__instance.IsServer && LobbyControl.PluginConfig.JoinQueue.Enabled.Value)
+                {
+                    _currentConnectingPlayerConfirmations = new bool[2];
+                    _currentConnectingPlayer = clientId;
+                    _currentConnectingExpiration = (ulong)Environment.TickCount +
+                                                   LobbyControl.PluginConfig.JoinQueue.ConnectionTimeout.Value;
+                }
             }
         }
 
@@ -54,8 +59,11 @@ namespace LobbyControl.Patches
                 return;
             
             LobbyControl.Log.LogInfo($"{clientId} disconnected");
-            if (_currentConnectingPlayer == clientId)
-                _currentConnectingPlayer = null;
+            lock (_lock)
+            {
+                if (_currentConnectingPlayer == clientId)
+                    _currentConnectingPlayer = null;
+            }
         }
 
         //SyncAlreadyHeldObjectsServerRpc
@@ -67,20 +75,23 @@ namespace LobbyControl.Patches
                 return;
             
             var clientId = rpcParams.Server.Receive.SenderClientId;
-            
-            if (_currentConnectingPlayer != clientId) 
-                return;
-            
-            _currentConnectingPlayerConfirmations[0] = true;
 
-            if (_currentConnectingPlayerConfirmations[1] || GameNetworkManager.Instance.disableSteam)
+            lock (_lock)
             {
-                LobbyControl.Log.LogWarning($"{clientId} completed the connection");
-                _currentConnectingPlayer = null;
-            }
-            else
-            {
-                LobbyControl.Log.LogWarning($"{clientId} is waiting to synchronize the name");
+                if (_currentConnectingPlayer != clientId) 
+                    return;
+            
+                _currentConnectingPlayerConfirmations[0] = true;
+
+                if (_currentConnectingPlayerConfirmations[1] || GameNetworkManager.Instance.disableSteam)
+                {
+                    LobbyControl.Log.LogWarning($"{clientId} completed the connection");
+                    _currentConnectingPlayer = null;
+                }
+                else
+                {
+                    LobbyControl.Log.LogWarning($"{clientId} is waiting to synchronize the name");
+                }
             }
         }
         
@@ -93,20 +104,23 @@ namespace LobbyControl.Patches
                 return;
             
             var clientId = rpcParams.Server.Receive.SenderClientId;
-            
-            if ( _currentConnectingPlayer != clientId) 
-                return;
-            
-            _currentConnectingPlayerConfirmations[1] = true;
 
-            if (_currentConnectingPlayerConfirmations[0])
+            lock (_lock)
             {
-                LobbyControl.Log.LogWarning($"{clientId} completed the connection");
-                _currentConnectingPlayer = null;
-            }
-            else
-            {
-                LobbyControl.Log.LogWarning($"{clientId} is waiting to synchronize the held items");
+                if ( _currentConnectingPlayer != clientId) 
+                    return;
+            
+                _currentConnectingPlayerConfirmations[1] = true;
+
+                if (_currentConnectingPlayerConfirmations[0])
+                {
+                    LobbyControl.Log.LogWarning($"{clientId} completed the connection");
+                    _currentConnectingPlayer = null;
+                }
+                else
+                {
+                    LobbyControl.Log.LogWarning($"{clientId} is waiting to synchronize the held items");
+                }
             }
         }
 
@@ -117,6 +131,9 @@ namespace LobbyControl.Patches
             if (!StartOfRound.Instance.IsServer)
                 return;
             
+            if(!Monitor.TryEnter(_lock))
+                return;
+
             try
             {
                 if (_currentConnectingPlayer.HasValue)
@@ -156,7 +173,33 @@ namespace LobbyControl.Patches
             {
                 LobbyControl.Log.LogError(ex);
             }
+            finally
+            {
+                Monitor.Exit(_lock);
+            }
         }
-        
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnLocalDisconnect))]
+        private static void FlushConnectionQueue()
+        {
+            lock (_lock)
+            {
+                _currentConnectingPlayerConfirmations = new bool[2];
+                _currentConnectingPlayer = null;
+                _currentConnectingExpiration = 0UL;
+                if (ConnectionQueue.Count > 0)
+                {
+                    LobbyControl.Log.LogWarning($"Disconnecting with {ConnectionQueue.Count} pending connection, Flushing!");
+                }
+
+                while (ConnectionQueue.TryDequeue(out var response))
+                {
+                    response.Reason = "Host has disconnected!";
+                    response.Approved = false;
+                    response.Pending = false;
+                }
+            }
+        }
     }
 }

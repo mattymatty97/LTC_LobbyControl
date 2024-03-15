@@ -33,6 +33,7 @@
         <ErrorReport>prompt</ErrorReport>
         <WarningLevel>4</WarningLevel>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <ExcludeGeneratedDebugSymbol>False</ExcludeGeneratedDebugSymbol>
     </PropertyGroup>
     <ItemGroup>
         <Reference Include="0Harmony, Version=2.7.0.0, Culture=neutral, processorArchitecture=MSIL">
