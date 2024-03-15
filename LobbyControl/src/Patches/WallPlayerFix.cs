@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Reflection.Emit;
+using System.Collections.Concurrent;
+using GameNetcodeStuff;
 using HarmonyLib;
 using Unity.Netcode;
 
@@ -11,62 +9,40 @@ namespace LobbyControl.Patches
     [HarmonyPatch]
     internal class WallPlayerFix
     {
-        [HarmonyPatch]
-        internal class Transpliers
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.ConnectionApproval))]
+        [HarmonyPriority(10)]
+        private static void ThrottleApprovals(bool __runOriginal,
+            NetworkManager.ConnectionApprovalRequest request,
+            NetworkManager.ConnectionApprovalResponse response)
         {
-            [HarmonyTranspiler]
-            [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.Singleton_OnClientConnectedCallback))]
-            private static IEnumerable<CodeInstruction> EnqueueConnection(IEnumerable<CodeInstruction> instructions)
-            {
-                var oldClientConnect =
-                    typeof(StartOfRound).GetMethod(nameof(StartOfRound.OnClientConnect));
-                var newClientConnect =
-                    typeof(WallPlayerFix).GetMethod(nameof(WallPlayerFix.OnClientConnectWrapper), BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Instance);
-
-                if (oldClientConnect == null || newClientConnect == null)
-                    return instructions;
+            if (!__runOriginal || !response.Approved)
+                return;
             
-                var codes = instructions.ToList();
-
-                for (var i = 0; i < codes.Count; i++)
-                {
-                    var curr = codes[i];
-                    if (curr.Calls(oldClientConnect))
-                    {
-                        codes[i] = new CodeInstruction(OpCodes.Callvirt, newClientConnect)
-                        {
-                            labels = codes[i].labels,
-                            blocks = codes[i].blocks
-                        };
-                        LobbyControl.Log.LogDebug("Patched Singleton_OnClientConnectedCallback!!");
-                        break;
-                    }
-                }
-
-                return codes;
-            }
+            if (!LobbyControl.PluginConfig.JoinQueue.Enabled.Value)
+                return;
+            
+            response.Pending = true;
+            ConnectionQueue.Enqueue(response);
+            LobbyControl.Log.LogWarning($"Connection request Enqueued! count:{ConnectionQueue.Count}");
         }
 
-        private static readonly List<ulong> ConnectionQueue = new List<ulong>();
+        private static readonly ConcurrentQueue<NetworkManager.ConnectionApprovalResponse> ConnectionQueue = new ConcurrentQueue<NetworkManager.ConnectionApprovalResponse>();
         private static ulong? _currentConnectingPlayer = null;
         private static ulong _currentConnectingExpiration = 0;
+        private static bool[] _currentConnectingPlayerConfirmations = new bool[2];
         
-        private static void OnClientConnectWrapper(StartOfRound startOfRound, ulong playerUUID)
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnClientConnect))]
+        private static void OnClientConnect(StartOfRound __instance, ulong clientId)
         {
-            if (!startOfRound.IsServer || !LobbyControl.PluginConfig.JoinQueue.Enabled.Value)
-                startOfRound.OnClientConnect(playerUUID);
-            else
+            if (__instance.IsServer && LobbyControl.PluginConfig.JoinQueue.Enabled.Value)
             {
-                if (!ConnectionQueue.Contains(playerUUID))
-                {
-                    LobbyControl.Log.LogInfo($"{playerUUID} attempted connection, Enqueued!");
-                    ConnectionQueue.Add(playerUUID);
-                }
-                else
-                {
-                    LobbyControl.Log.LogWarning($"{playerUUID} was already connecting, Kicking!");
-                    NetworkManager.Singleton.DisconnectClient(playerUUID);
-                }
+                _currentConnectingPlayerConfirmations = new bool[2];
+                _currentConnectingPlayer = clientId;
+                _currentConnectingExpiration = (ulong)Environment.TickCount +
+                                               LobbyControl.PluginConfig.JoinQueue.ConnectionTimeout.Value;
             }
         }
 
@@ -78,63 +54,103 @@ namespace LobbyControl.Patches
                 return;
             
             LobbyControl.Log.LogInfo($"{clientId} disconnected");
-            ConnectionQueue.Remove(clientId);
             if (_currentConnectingPlayer == clientId)
                 _currentConnectingPlayer = null;
         }
 
         //SyncAlreadyHeldObjectsServerRpc
-        [HarmonyPrefix]
+        [HarmonyPostfix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.__rpc_handler_682230258))]
-        private static void ClientConnectionCompleted(__RpcParams rpcParams)
+        private static void ClientConnectionCompleted1(__RpcParams rpcParams)
         {
             if (!StartOfRound.Instance.IsServer)
                 return;
             
             var clientId = rpcParams.Server.Receive.SenderClientId;
-            if (ConnectionQueue.Remove(clientId))
-                LobbyControl.Log.LogInfo($"{clientId} is now connected");
-            else if (!LobbyControl.PluginConfig.JoinQueue.Enabled.Value)
-                LobbyControl.Log.LogWarning($"{clientId} completed connection but was not in the ConnectionQueue!");
-            if (_currentConnectingPlayer == clientId)
-                _currentConnectingPlayer = null;
-        }
+            
+            if (_currentConnectingPlayer != clientId) 
+                return;
+            
+            _currentConnectingPlayerConfirmations[0] = true;
 
+            if (_currentConnectingPlayerConfirmations[1] || GameNetworkManager.Instance.disableSteam)
+            {
+                LobbyControl.Log.LogWarning($"{clientId} completed the connection");
+                _currentConnectingPlayer = null;
+            }
+            else
+            {
+                LobbyControl.Log.LogWarning($"{clientId} is waiting to synchronize the name");
+            }
+        }
+        
+        //SendNewPlayerValuesServerRpc
         [HarmonyPostfix]
-        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.LateUpdate))]
-        private static void ProcessConnectionQueue(StartOfRound __instance)
+        [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.__rpc_handler_2504133785))]
+        private static void ClientConnectionCompleted2(__RpcParams rpcParams)
         {
             if (!StartOfRound.Instance.IsServer)
                 return;
             
-            if (_currentConnectingPlayer != null)
+            var clientId = rpcParams.Server.Receive.SenderClientId;
+            
+            if ( _currentConnectingPlayer != clientId) 
+                return;
+            
+            _currentConnectingPlayerConfirmations[1] = true;
+
+            if (_currentConnectingPlayerConfirmations[0])
             {
-                if ((ulong)DateTimeOffset.Now.ToUnixTimeMilliseconds() < _currentConnectingExpiration)
-                    return;
-                
-                LobbyControl.Log.LogWarning($"Connection to {_currentConnectingPlayer} expired, Disonnecting!");
-                try
-                {
-                    NetworkManager.Singleton.DisconnectClient(_currentConnectingPlayer.Value);
-                }
-                catch (Exception ex)
-                {
-                    LobbyControl.Log.LogError(ex);
-                }
-                ConnectionQueue.Remove(_currentConnectingPlayer.Value);
+                LobbyControl.Log.LogWarning($"{clientId} completed the connection");
                 _currentConnectingPlayer = null;
             }
-            if (ConnectionQueue.Count <= 0)
-                return;
+            else
+            {
+                LobbyControl.Log.LogWarning($"{clientId} is waiting to synchronize the held items");
+            }
+        }
 
-            var clientId = ConnectionQueue[0];
-            _currentConnectingPlayer = clientId;
-            _currentConnectingExpiration = (ulong)DateTimeOffset.Now.ToUnixTimeMilliseconds() + LobbyControl.PluginConfig.JoinQueue.ConnectionTimeout.Value;
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.LateUpdate))]
+        private static void ProcessConnectionQueue()
+        {
+            if (!StartOfRound.Instance.IsServer)
+                return;
             
-            LobbyControl.Log.LogInfo($"Started processing {clientId} connection");
             try
             {
-                __instance.OnClientConnect(clientId);                
+                if (_currentConnectingPlayer.HasValue)
+                {
+                    if ((ulong)Environment.TickCount < _currentConnectingExpiration)
+                        return;
+
+                    if (_currentConnectingPlayer.Value != 0L)
+                    {
+                        LobbyControl.Log.LogWarning(
+                            $"Connection to {_currentConnectingPlayer.Value} expired, Disconnecting!");
+                        try
+                        {
+                            NetworkManager.Singleton.DisconnectClient(_currentConnectingPlayer.Value);
+                        }
+                        catch (Exception ex)
+                        {
+                            LobbyControl.Log.LogError(ex);
+                        }
+                    }
+
+                    _currentConnectingPlayer = null;
+                }
+                else
+                {
+                    if (ConnectionQueue.TryDequeue(out var response))
+                    {
+                        LobbyControl.Log.LogWarning($"Connection request Resumed! remaining: {ConnectionQueue.Count}");
+                        response.Pending = false;
+                        _currentConnectingPlayerConfirmations = new bool[2];
+                        _currentConnectingPlayer = 0L;
+                        _currentConnectingExpiration = (ulong)Environment.TickCount + 5000UL;
+                    }
+                }
             }
             catch (Exception ex)
             {

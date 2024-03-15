@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -8,17 +7,12 @@ using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
-//using LethalAPI.TerminalCommands.Models;
 using LobbyControl.PopUp;
 using LobbyControl.TerminalCommands;
-using Unity.Netcode;
-using UnityEngine;
-using Object = UnityEngine.Object;
 using PluginInfo = BepInEx.PluginInfo;
 
 namespace LobbyControl
 {
-    //[BepInDependency("LethalAPI.Terminal", Flags:BepInDependency.DependencyFlags.HardDependency)]
     [BepInPlugin(GUID, NAME, VERSION)]
     [BepInDependency("com.github.tinyhoot.ShipLobby", Flags:BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("twig.latecompany", Flags:BepInDependency.DependencyFlags.SoftDependency)]
@@ -27,7 +21,7 @@ namespace LobbyControl
     {
         public const string GUID = "mattymatty.LobbyControl";
         public const string NAME = "LobbyControl";
-        public const string VERSION = "2.3.0.11";
+        public const string VERSION = "2.3.0";
 
         internal static ManualLogSource Log;
 
@@ -36,7 +30,6 @@ namespace LobbyControl
         public static bool CanSave = true;
         public static bool AutoSaveEnabled = true;
 
-        //private TerminalModRegistry _commands;
 
         private static readonly string[] IncompatibleGUIDs = new string[]
         {
@@ -69,10 +62,6 @@ namespace LobbyControl
                     Log.LogInfo("Initializing Configs");
 
                     PluginConfig.Init(this);
-
-                    /*Log.LogInfo("Registering Commands");
-                    _commands = TerminalRegistry.CreateTerminalRegistry();
-                    _commands.RegisterFrom<LobbyCommands>();*/
                     
                     CommandManager.Initialize();
                     
@@ -88,10 +77,7 @@ namespace LobbyControl
                 Log.LogError("Exception while initializing: \n" + ex);
             }
         }
-        
-        
-        private static readonly MethodInfo BeginSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__beginSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
-        private static readonly MethodInfo EndSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__endSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
+
 
         internal static class PluginConfig
         {
@@ -240,178 +226,5 @@ namespace LobbyControl
             }
         }
 
-        // ReSharper disable Unity.PerformanceAnalysis
-        internal static IEnumerator LoadLobbyCoroutine()
-        {
-            var startOfRound = StartOfRound.Instance;
-            var terminal = Object.FindObjectOfType<Terminal>();
-            //remove all items
-            startOfRound.ResetShipFurniture();
-            startOfRound.ResetPooledObjects(true);
-            //remove remaining unlockables
-            foreach (var unlockable in StartOfRound.Instance.SpawnedShipUnlockables.ToList())
-            {
-                var itemEntry = startOfRound.unlockablesList.unlockables[unlockable.Key];
-                if (!itemEntry.alreadyUnlocked || !itemEntry.spawnPrefab) 
-                    continue;
-                                
-                if(unlockable.Value == null)
-                    continue;
-                                
-                NetworkObject component = unlockable.Value.GetComponent<NetworkObject>();
-                if (component != null && component.IsSpawned)
-                    component.Despawn();
-            }
-            startOfRound.SpawnedShipUnlockables.Clear();
-            startOfRound.suitsPlaced = 0;
-            //wait
-            yield return new WaitForSeconds(0.2f);
-            //read new misc data
-            startOfRound.SetTimeAndPlanetToSavedSettings();
-            startOfRound.SetMapScreenInfoToCurrentLevel();
-            //restart the terminal
-            terminal.Start();
-            //if there are any players
-            if (startOfRound.connectedPlayersAmount >= 1)
-            {
-                //send the updated misc variables to the players
-                RefreshLobby();
-            }   
-            //spawn the new unlockables and update their position
-            ReloadUnlockables();
-            yield return new WaitForSeconds(0.2f);
-            //spawn new items
-            startOfRound.LoadShipGrabbableItems();
-            yield return new WaitForSeconds(0.1f);
-            //if there are any players
-            if (startOfRound.connectedPlayersAmount >= 1)
-            {
-                //sync item variables
-                startOfRound.SyncShipUnlockablesServerRpc();
-            }
-        }
-        
-        internal static void ReloadUnlockables()
-        {
-            StartOfRound startOfRound = StartOfRound.Instance;
-            startOfRound.LoadUnlockables();
-            try
-            {
-                //7 - closet
-                //8 - cabinet
-                //15 - beds
-                //16 - terminal
-                for (var baseUnlockable = 0; baseUnlockable < startOfRound.unlockablesList.unlockables.Count; baseUnlockable++)
-                {
-                    var unlockable = startOfRound.unlockablesList.unlockables[baseUnlockable];
-                    if (unlockable.alreadyUnlocked && !startOfRound.SpawnedShipUnlockables.ContainsKey(baseUnlockable) &&
-                        !unlockable.inStorage)
-                    {
-                        startOfRound.SpawnUnlockable(baseUnlockable);
-                        PlaceableShipObject shipObject = startOfRound.SpawnedShipUnlockables[baseUnlockable]
-                            .GetComponent<PlaceableShipObject>();
-                        if (!shipObject)
-                            shipObject = startOfRound.SpawnedShipUnlockables[baseUnlockable]
-                                .GetComponentInChildren<PlaceableShipObject>();
-                        var parentObject = shipObject.parentObject;
-                        if (parentObject != null)
-                        {
-                            var offset = parentObject.positionOffset;
-                            var localOffset = startOfRound.elevatorTransform.TransformPoint(offset);
-                            var position = shipObject.mainMesh.transform.position;
-                            var placementPosition = localOffset -
-                                                    (shipObject.parentObject.transform.position - position) -
-                                                    (position - shipObject.placeObjectCollider.transform.position);
-                            unlockable.placedPosition = placementPosition;
-                            var rotation = Quaternion.Euler(parentObject.rotationOffset);
-                            var step1 = rotation * Quaternion.Inverse(parentObject.transform.rotation);
-                            var step2 = step1 * shipObject.mainMesh.transform.rotation;
-                            var placementRotation = step2.eulerAngles;
-                            unlockable.placedRotation = placementRotation;
-                        }
-                    }
-                }
-
-                if (startOfRound.connectedPlayersAmount >= 1)
-                {
-                    List<ulong> rpcList = startOfRound.ClientPlayerList.Keys.ToList();
-
-                    ClientRpcParams clientRpcParams = new ClientRpcParams()
-                    {
-                        Send = new ClientRpcSendParams()
-                        {
-                            TargetClientIds = rpcList,
-                        },
-                    };
-
-                    for (var baseUnlockable = 0; baseUnlockable < startOfRound.unlockablesList.unlockables.Count; baseUnlockable++)
-                    {
-                        var unlockable = startOfRound.unlockablesList.unlockables[baseUnlockable];
-                        if (unlockable.alreadyUnlocked && !unlockable.inStorage)
-                        {
-                            FastBufferWriter bufferWriter = (FastBufferWriter)BeginSendClientRpc.Invoke(startOfRound,
-                                new object[] { 1076853239U, clientRpcParams, RpcDelivery.Reliable });
-                            BytePacker.WriteValueBitPacked(bufferWriter, baseUnlockable);
-                            EndSendClientRpc.Invoke(startOfRound,
-                                new object[] { bufferWriter, 1076853239U, clientRpcParams, RpcDelivery.Reliable });
-                        }
-                    }
-
-                    startOfRound.SyncShipUnlockablesServerRpc();
-                }
-            }
-            catch (Exception ex)
-            {
-                LobbyControl.Log.LogError(ex);
-            }
-        }
-
-        internal static void RefreshLobby()
-        {
-            var startOfRound = StartOfRound.Instance;
-            List<ulong> ulongList = new List<ulong>();
-            List<ulong> rpcList = new List<ulong>();
-            for (var index = 0; index < startOfRound.allPlayerObjects.Length; ++index)
-            {
-                var component = startOfRound.allPlayerObjects[index].GetComponent<NetworkObject>();
-                if (!component.IsOwnedByServer)
-                {
-                    ulongList.Add(component.OwnerClientId);
-                    rpcList.Add(component.OwnerClientId);
-                }
-                else if (index == 0)
-                    ulongList.Add(NetworkManager.Singleton.LocalClientId);
-                else
-                    ulongList.Add(999UL);
-            }
-            
-            ClientRpcParams clientRpcParams = new ClientRpcParams() {
-                Send = new ClientRpcSendParams() {
-                    TargetClientIds = rpcList,
-                },
-            };
-            
-            var groupCredits = Object.FindObjectOfType<Terminal>().groupCredits;
-            var profitQuota = TimeOfDay.Instance.profitQuota;
-            var quotaFulfilled = TimeOfDay.Instance.quotaFulfilled;
-            var timeUntilDeadline = (int)TimeOfDay.Instance.timeUntilDeadline;
-            var controller = StartOfRound.Instance.localPlayerController;
-
-            FastBufferWriter bufferWriter = (FastBufferWriter)BeginSendClientRpc.Invoke(startOfRound, new object[]{886676601U, clientRpcParams, RpcDelivery.Reliable});
-            BytePacker.WriteValueBitPacked(bufferWriter, controller.actualClientId);
-            BytePacker.WriteValueBitPacked(bufferWriter, startOfRound.connectedPlayersAmount - 1);
-            bufferWriter.WriteValueSafe<bool>(true);
-            bufferWriter.WriteValueSafe<ulong>(ulongList.ToArray());
-            BytePacker.WriteValueBitPacked(bufferWriter, startOfRound.ClientPlayerList[controller.actualClientId]);
-            BytePacker.WriteValueBitPacked(bufferWriter, groupCredits);
-            BytePacker.WriteValueBitPacked(bufferWriter, startOfRound.currentLevelID);
-            BytePacker.WriteValueBitPacked(bufferWriter, profitQuota);
-            BytePacker.WriteValueBitPacked(bufferWriter, timeUntilDeadline);
-            BytePacker.WriteValueBitPacked(bufferWriter, quotaFulfilled);
-            BytePacker.WriteValueBitPacked(bufferWriter,  startOfRound.randomMapSeed);
-            bufferWriter.WriteValueSafe<bool>(in startOfRound.isChallengeFile, new FastBufferWriter.ForPrimitives());
-            EndSendClientRpc.Invoke(startOfRound, new object[]{bufferWriter, 886676601U, clientRpcParams, RpcDelivery.Reliable});
-
-        }
     }
 }

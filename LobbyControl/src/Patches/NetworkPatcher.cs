@@ -1,7 +1,9 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
+using GameNetcodeStuff;
 using HarmonyLib;
 using Unity.Netcode;
 using UnityEngine;
@@ -65,7 +67,7 @@ namespace LobbyControl.Patches
         /// </summary>
         [HarmonyPostfix]
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.ConnectionApproval))]
-        [HarmonyPriority(0)]
+        [HarmonyPriority(20)]
         private static void FixConnectionApprovalPostFix(GameNetworkManager __instance, bool __runOriginal,
             NetworkManager.ConnectionApprovalResponse response)
         {
@@ -235,5 +237,14 @@ namespace LobbyControl.Patches
 
             PendingClients.Remove(clientId);
         }
+        
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnPlayerConnectedClientRpc))]
+        private static void ResetDcFlags(StartOfRound __instance, ulong clientId, 
+            int assignedPlayerObjectId)
+        {
+            __instance.allPlayerScripts[assignedPlayerObjectId].disconnectedMidGame = false;
+        }
+        
     }
 }

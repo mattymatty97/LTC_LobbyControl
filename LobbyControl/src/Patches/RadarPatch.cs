@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using HarmonyLib;
 using Unity.Netcode;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace LobbyControl.Patches
 {
@@ -54,6 +56,17 @@ namespace LobbyControl.Patches
                 if (obj != null && obj.radarIcon != null && obj.radarIcon.gameObject != null)
                     Object.Destroy(obj.radarIcon.gameObject);
             }
+        }
+        
+        [HarmonyFinalizer]
+        [HarmonyPatch(typeof(GrabbableObject), nameof(GrabbableObject.Start))]
+        private static Exception GracefullyHandleExceptionsFromMods(GrabbableObject __instance, Exception __exception)
+        {
+            if (__exception != null)
+            {
+                Debug.LogException(__exception);
+            }
+            return null;
         }
     }
 }
