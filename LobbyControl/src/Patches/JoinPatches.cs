@@ -86,9 +86,12 @@ namespace LobbyControl.Patches
         //SyncAlreadyHeldObjectsServerRpc
         [HarmonyPostfix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.__rpc_handler_682230258))]
-        private static void ClientConnectionCompleted1(__RpcParams rpcParams)
+        private static void ClientConnectionCompleted1(
+            NetworkBehaviour target,
+            __RpcParams rpcParams)
         {
-            if (!StartOfRound.Instance.IsServer)
+            var startOfRound = (StartOfRound)target;
+            if (!startOfRound.IsServer)
                 return;
             
             var clientId = rpcParams.Server.Receive.SenderClientId;
@@ -117,9 +120,11 @@ namespace LobbyControl.Patches
         //SendNewPlayerValuesServerRpc
         [HarmonyPostfix]
         [HarmonyPatch(typeof(PlayerControllerB), nameof(PlayerControllerB.__rpc_handler_2504133785))]
-        private static void ClientConnectionCompleted2(__RpcParams rpcParams)
+        private static void ClientConnectionCompleted2(
+            NetworkBehaviour target, __RpcParams rpcParams)
         {
-            if (!StartOfRound.Instance.IsServer)
+            var startOfRound = (StartOfRound)target;
+            if (!startOfRound.IsServer)
                 return;
             
             var clientId = rpcParams.Server.Receive.SenderClientId;

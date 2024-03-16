@@ -650,17 +650,23 @@ Extra:
                     var unlockable = startOfRound.unlockablesList.unlockables[baseUnlockable];
                     if (unlockable.alreadyUnlocked)
                     {
+                        LobbyControl.Log.LogWarning($"{unlockable.unlockableName} starting");
                         if (!startOfRound.SpawnedShipUnlockables.ContainsKey(baseUnlockable))
                             startOfRound.SpawnUnlockable(baseUnlockable);
                         PlaceableShipObject shipObject = startOfRound.SpawnedShipUnlockables[baseUnlockable]
                             .GetComponent<PlaceableShipObject>();
                         
                         if (shipObject is null)
+                            shipObject = startOfRound.SpawnedShipUnlockables[baseUnlockable]
+                                .GetComponentInChildren<PlaceableShipObject>();
+                        if (shipObject is null)
                             continue;
                         
+                        LobbyControl.Log.LogWarning($"{unlockable.unlockableName} continuing");
                         var parentObject = shipObject.parentObject;
                         if (parentObject != null)
                         {
+                            LobbyControl.Log.LogWarning($"{unlockable.unlockableName} parentObject");
                             if (unlockable.inStorage)
                                 shipObject.parentObject.disableObject = true;
                             
@@ -679,6 +685,7 @@ Extra:
                         }
                         else
                         {
+                            LobbyControl.Log.LogWarning($"{unlockable.unlockableName} parentObjectSecondary");
                             var parentObjectSecondary = shipObject.parentObjectSecondary;
                             var parentPos = parentObjectSecondary.position;
                             var transform = shipObject.mainMesh.transform;
