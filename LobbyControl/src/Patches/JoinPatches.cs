@@ -8,16 +8,19 @@ using Unity.Netcode;
 namespace LobbyControl.Patches
 {
     [HarmonyPatch]
-    internal class WallPlayerFix
+    internal class JoinPatches
     {
-
-        [HarmonyPostfix]
+        
+        [HarmonyFinalizer]
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.ConnectionApproval))]
         [HarmonyPriority(10)]
         private static void ThrottleApprovals(bool __runOriginal,
             NetworkManager.ConnectionApprovalRequest request,
-            NetworkManager.ConnectionApprovalResponse response)
+            NetworkManager.ConnectionApprovalResponse response,
+            Exception __exception)
         {
+            if (__exception != null)
+                return;
             if (!__runOriginal || !response.Approved)
                 return;
             
@@ -51,6 +54,17 @@ namespace LobbyControl.Patches
             }
         }
 
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnPlayerDC))]
+        private static void ResetForDc(StartOfRound __instance, int playerObjectNumber)
+        {
+            var playerObject = __instance.allPlayerObjects[playerObjectNumber];
+            var playerScript = __instance.allPlayerScripts[playerObjectNumber];
+            playerObject.transform.parent = __instance.playersContainer;
+            playerScript.justConnected = true;
+            playerScript.isCameraDisabled = true;
+        }
+
         [HarmonyPrefix]
         [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.Singleton_OnClientDisconnectCallback))]
         private static void OnClientDisconnect(GameNetworkManager __instance, ulong clientId)
@@ -62,7 +76,10 @@ namespace LobbyControl.Patches
             lock (_lock)
             {
                 if (_currentConnectingPlayer == clientId)
+                {
                     _currentConnectingPlayer = null;
+                    _currentConnectingExpiration = 0;
+                }
             }
         }
 
@@ -87,6 +104,8 @@ namespace LobbyControl.Patches
                 {
                     LobbyControl.Log.LogWarning($"{clientId} completed the connection");
                     _currentConnectingPlayer = null;
+                    _currentConnectingExpiration = (ulong)Environment.TickCount +
+                                                   LobbyControl.PluginConfig.JoinQueue.ConnectionDelay.Value;
                 }
                 else
                 {
@@ -116,6 +135,8 @@ namespace LobbyControl.Patches
                 {
                     LobbyControl.Log.LogWarning($"{clientId} completed the connection");
                     _currentConnectingPlayer = null;
+                    _currentConnectingExpiration = (ulong)Environment.TickCount +
+                                                   LobbyControl.PluginConfig.JoinQueue.ConnectionDelay.Value;
                 }
                 else
                 {
@@ -156,9 +177,13 @@ namespace LobbyControl.Patches
                     }
 
                     _currentConnectingPlayer = null;
+                    _currentConnectingExpiration = 0;
                 }
                 else
                 {
+                    if ((ulong)Environment.TickCount < _currentConnectingExpiration)
+                        return;
+                    
                     if (ConnectionQueue.TryDequeue(out var response))
                     {
                         LobbyControl.Log.LogWarning($"Connection request Resumed! remaining: {ConnectionQueue.Count}");

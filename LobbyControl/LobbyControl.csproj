@@ -275,18 +275,20 @@
     <ItemGroup>
         <Compile Include="src\LobbyControl.cs" />
         <Compile Include="src\Patches\CupBoardFix.cs" />
+        <Compile Include="src\Patches\DebugPatches.cs" />
         <Compile Include="src\Patches\ItemSyncPatches.cs" />
         <Compile Include="src\Patches\ItemClippingPatch.cs" />
         <Compile Include="src\Patches\LimitPatcher.cs" />
         <Compile Include="src\Patches\LobbyPatcher.cs" />
         <Compile Include="src\Patches\LogSpamFix.cs" />
+        <Compile Include="src\Patches\MoreCompanyPatches.cs" />
         <Compile Include="src\Patches\NetworkPatcher.cs" />
         <Compile Include="src\Patches\OutOfBoundsItemsFix.cs" />
         <Compile Include="src\Patches\RadarPatch.cs" />
         <Compile Include="src\Patches\SavePatches.cs" />
         <Compile Include="src\Patches\TerminalPatch.cs" />
         <Compile Include="src\Patches\TransparentPlayerFix.cs" />
-        <Compile Include="src\Patches\WallPlayerFix.cs" />
+        <Compile Include="src\Patches\JoinPatches.cs" />
         <Compile Include="src\PopUp\OnDisablePatch.cs" />
         <Compile Include="src\Properties\AssemblyInfo.cs" />
         <Compile Include="src\TerminalCommands\Command.cs" />
