@@ -48,8 +48,8 @@ namespace LobbyControl.Patches
                 {
                     _currentConnectingPlayerConfirmations = new bool[2];
                     _currentConnectingPlayer = clientId;
-                    _currentConnectingExpiration = (ulong)Environment.TickCount +
-                                                   LobbyControl.PluginConfig.JoinQueue.ConnectionTimeout.Value;
+                    _currentConnectingExpiration = (ulong)(Environment.TickCount +
+                                                   LobbyControl.PluginConfig.JoinQueue.ConnectionTimeout.Value);
                 }
             }
         }
@@ -107,8 +107,8 @@ namespace LobbyControl.Patches
                 {
                     LobbyControl.Log.LogWarning($"{clientId} completed the connection");
                     _currentConnectingPlayer = null;
-                    _currentConnectingExpiration = (ulong)Environment.TickCount +
-                                                   LobbyControl.PluginConfig.JoinQueue.ConnectionDelay.Value;
+                    _currentConnectingExpiration = (ulong)(Environment.TickCount +
+                                                   LobbyControl.PluginConfig.JoinQueue.ConnectionDelay.Value);
                 }
                 else
                 {
@@ -123,8 +123,8 @@ namespace LobbyControl.Patches
         private static void ClientConnectionCompleted2(
             NetworkBehaviour target, __RpcParams rpcParams)
         {
-            var startOfRound = (StartOfRound)target;
-            if (!startOfRound.IsServer)
+            var playerControllerB = (PlayerControllerB)target;
+            if (!playerControllerB.IsServer)
                 return;
             
             var clientId = rpcParams.Server.Receive.SenderClientId;
@@ -140,8 +140,8 @@ namespace LobbyControl.Patches
                 {
                     LobbyControl.Log.LogWarning($"{clientId} completed the connection");
                     _currentConnectingPlayer = null;
-                    _currentConnectingExpiration = (ulong)Environment.TickCount +
-                                                   LobbyControl.PluginConfig.JoinQueue.ConnectionDelay.Value;
+                    _currentConnectingExpiration = (ulong)(Environment.TickCount +
+                                                   LobbyControl.PluginConfig.JoinQueue.ConnectionDelay.Value);
                 }
                 else
                 {

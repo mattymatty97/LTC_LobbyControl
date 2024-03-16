@@ -147,9 +147,9 @@ namespace LobbyControl
                 //JoinQueue
                 JoinQueue.Enabled = config.Bind("JoinQueue","enabled",true
                     ,"handle joining players as a queue instead of at the same time");
-                JoinQueue.ConnectionTimeout = config.Bind("JoinQueue","connection_timeout_ms",30000UL
+                JoinQueue.ConnectionTimeout = config.Bind("JoinQueue","connection_timeout_ms",30000L
                     ,"After how much time discard a hanging connection");
-                JoinQueue.ConnectionDelay = config.Bind("JoinQueue","connection_timeout_ms",500UL
+                JoinQueue.ConnectionDelay = config.Bind("JoinQueue","connection_timeout_ms",500L
                     ,"After how much time discard a hanging connection");
 
                 //remove unused options
@@ -224,8 +224,8 @@ namespace LobbyControl
             internal static class JoinQueue
             {
                 internal static ConfigEntry<bool> Enabled;
-                internal static ConfigEntry<ulong> ConnectionTimeout;
-                internal static ConfigEntry<ulong> ConnectionDelay;
+                internal static ConfigEntry<long> ConnectionTimeout;
+                internal static ConfigEntry<long> ConnectionDelay;
             }
         }
 

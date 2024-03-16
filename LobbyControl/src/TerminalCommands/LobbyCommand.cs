@@ -445,7 +445,7 @@ Extra:
 
             LobbyControl.CanSave = true;
             HUDManager.Instance.saveDataIconAnimatorB.SetTrigger("save");
-            manager.SaveGame();
+            manager.SaveGameValues();
             var outText = "Lobby Saved to " + manager.currentSaveFileName;
             LobbyControl.CanSave = LobbyControl.AutoSaveEnabled;
             manager.currentSaveFileName = oldSaveFileName;
