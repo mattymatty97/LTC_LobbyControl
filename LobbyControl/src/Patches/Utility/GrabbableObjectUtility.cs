@@ -41,14 +41,14 @@ namespace LobbyControl.Patches.Utility
         internal static void AppendToHolder(GrabbableObject obj, string key, int delay, Action<GrabbableObject,UpdateHolder> callback)
         {
             if (!UpdateCallbacks.ContainsKey(key))
-                UpdateCallbacks.Add(key, callback);
+                UpdateCallbacks[key] = callback;
             
             if (!UpdateHolders.TryGetValue(obj, out var updateHolder))
             {
                 var transform = obj.transform;
                 UpdateHolders[obj] = updateHolder = new UpdateHolder(new Dictionary<string, int>(),transform.position);
             }
-            updateHolder.DelayTicks.Add(key, delay);
+            updateHolder.DelayTicks[key] = delay;
         }
         
         [HarmonyPrefix]
