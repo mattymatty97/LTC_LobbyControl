@@ -467,6 +467,7 @@ namespace LobbyControl.Patches
             meshCopy.indexFormat = nonReadableMesh.indexFormat;
 
             // Handle vertices
+            nonReadableMesh.vertexBufferTarget |= GraphicsBuffer.Target.Vertex;
             GraphicsBuffer verticesBuffer = nonReadableMesh.GetVertexBuffer(0);
             int totalSize = verticesBuffer.stride * verticesBuffer.count;
             byte[] data = new byte[totalSize];
@@ -476,6 +477,7 @@ namespace LobbyControl.Patches
             verticesBuffer.Release();
 
             // Handle triangles
+            nonReadableMesh.indexBufferTarget |= GraphicsBuffer.Target.Index;
             meshCopy.subMeshCount = nonReadableMesh.subMeshCount;
             GraphicsBuffer indexesBuffer = nonReadableMesh.GetIndexBuffer();
             int tot = indexesBuffer.stride * indexesBuffer.count;

@@ -218,7 +218,6 @@ namespace LobbyControl
             {
                 internal static ConfigEntry<bool> Enabled;
                 internal static ConfigEntry<bool> CalculatePolygonPath;
-                internal static ConfigEntry<bool> ZeroSurfaceArea;
                 internal static ConfigEntry<bool> MoreCompany;
             }
             
