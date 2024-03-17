@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using HarmonyLib;
+using LobbyControl.Patches.Utility;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -202,8 +203,6 @@ namespace LobbyControl.Patches
             }
         };
 
-        private static bool _isLoadingLobby;
-
         internal static Vector3 FixPlacement(Vector3 hitPoint, Transform shelfTransform, GrabbableObject heldObject)
         {
             hitPoint.y = shelfTransform.position.y + shelfTransform.localScale.z / 2f;
@@ -216,7 +215,7 @@ namespace LobbyControl.Patches
         {
             [HarmonyPrefix]
             [HarmonyPatch(nameof(PlaceableObjectsSurface.itemPlacementPosition))]
-            private static bool itemPlacementPositionPatch(PlaceableObjectsSurface __instance, ref Vector3 __result,
+            private static bool ItemPlacementPositionPatch(PlaceableObjectsSurface __instance, ref Vector3 __result,
                 Transform gameplayCamera, GrabbableObject heldObject)
             {
                 if (!LobbyControl.PluginConfig.ItemClipping.Enabled.Value)
@@ -342,21 +341,6 @@ namespace LobbyControl.Patches
                     LobbyControl.Log.LogError($"An Object crashed badly! {ex}");
                 }
             }
-
-
-            [HarmonyPrefix]
-            [HarmonyPatch(nameof(StartOfRound.LoadShipGrabbableItems))]
-            private static void BeforeLoad()
-            {
-                _isLoadingLobby = true;
-            }
-
-            [HarmonyPostfix]
-            [HarmonyPatch(nameof(StartOfRound.LoadShipGrabbableItems))]
-            private static void AfterLoad()
-            {
-                _isLoadingLobby = false;
-            }
         }
 
         [HarmonyPatch(typeof(NetworkBehaviour))]
@@ -365,7 +349,7 @@ namespace LobbyControl.Patches
             
             [HarmonyPostfix]
             [HarmonyPatch(nameof(NetworkBehaviour.OnNetworkSpawn))]
-            [HarmonyPriority(0)]
+            [HarmonyPriority(20)]
             private static void StartPostfix(NetworkBehaviour __instance)
             {
                
@@ -378,7 +362,7 @@ namespace LobbyControl.Patches
                 if (__instance.transform.name == "ClipboardManual" || __instance.transform.name == "StickyNoteItem")
                     return;
                 
-                if (!grabbable.isInShipRoom || !_isLoadingLobby)
+                if (!StartOfRound.Instance.shipInnerRoomBounds.bounds.Contains(__instance.transform.position))
                     return;
 
                 try
