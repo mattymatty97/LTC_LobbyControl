@@ -48,47 +48,8 @@ namespace LobbyControl.Patches
             }
             
         }
-        
-        [HarmonyPatch(typeof(StormyWeather))]
-        internal class StormyWeatherPatch
-        {
-            [HarmonyPrefix]
-            [HarmonyPatch(nameof(StormyWeather.SetStaticElectricityWarning))]
-            private static void changeParticleShape(StormyWeather __instance, NetworkObject warningObject)
-            {
-                if (!LobbyControl.PluginConfig.LogSpam.Enabled.Value ||
-                    !LobbyControl.PluginConfig.LogSpam.ZeroSurfaceArea.Value)
-                    return;
-                
-                Bounds? bounds = ItemClippingPatch.CalculateBounds(warningObject.gameObject);
-                
-                var shapeModule = __instance.staticElectricityParticle.shape;
-                
-                shapeModule.shapeType = ParticleSystemShapeType.Sphere;
-                shapeModule.radiusThickness = 0.01f;
-                if (!bounds.HasValue)
-                    return;
-                var diagonal = Vector3.Distance(bounds.Value.min, bounds.Value.max);
-                shapeModule.radius = diagonal / 2f;
-            }
-            
-            [HarmonyPostfix]
-            [HarmonyPatch(nameof(StormyWeather.Update))]
-            private static void SetCorrectParticlePosition(StormyWeather __instance)
-            {
-                if (!LobbyControl.PluginConfig.LogSpam.Enabled.Value ||
-                    !LobbyControl.PluginConfig.LogSpam.ZeroSurfaceArea.Value)
-                    return;
-                if (__instance.setStaticToObject==null)
-                    return;
-
-                var bounds = ItemClippingPatch.CalculateBounds(__instance.setStaticToObject);
-                if(!bounds.HasValue)
-                    return;
-                
-                __instance.staticElectricityParticle.transform.position = bounds.Value.center + Vector3.up * 0.5f;
-            }
-        }
+        /*
+*/
         
 
     }

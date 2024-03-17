@@ -277,7 +277,7 @@
         <Compile Include="src\Patches\CupBoardFix.cs" />
         <Compile Include="src\Patches\DebugPatches.cs" />
         <Compile Include="src\Patches\ItemSyncPatches.cs" />
-        <Compile Include="src\Patches\ItemClippingPatch.cs" />
+        <Compile Include="src\Patches\ItemPatches.cs" />
         <Compile Include="src\Patches\LimitPatcher.cs" />
         <Compile Include="src\Patches\LobbyPatcher.cs" />
         <Compile Include="src\Patches\LogSpamFix.cs" />

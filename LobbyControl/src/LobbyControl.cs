@@ -119,7 +119,7 @@ namespace LobbyControl
                     ,"fix rotation of newly spawned items");
                 ItemClipping.VerticalOffset = config.Bind("ItemClipping","vertical_offset",0f
                     ,"additional y offset for items on the ground");
-                ItemClipping.ManualOffsets = config.Bind("ItemClipping","manual_offsets","Apparatus:0.25,Pro-flashlight:0.03,Large axle:0.55"
+                ItemClipping.ManualOffsets = config.Bind("ItemClipping","manual_offsets","Comedy:0.085,Tragedy:0.085"
                     ,"y offset for items on the ground");
                 //SaveLimit
                 SaveLimit.Enabled = config.Bind("SaveLimit","enabled",true
@@ -140,8 +140,6 @@ namespace LobbyControl
                     ,"prevent some annoying log spam");
                 LogSpam.CalculatePolygonPath = config.Bind("LogSpam","CalculatePolygonPath",true
                     ,"stop pathfinding for dead Enemies");
-                LogSpam.ZeroSurfaceArea = config.Bind("LogSpam","zero_surface_area",true
-                    ,"use sphere shape for lightning particles ( this also makes them more visible on all items )");
                 LogSpam.MoreCompany = config.Bind("LogSpam","more_company",true
                     ,"Remove some leftover Exceptions caused by MoreCompany");
                 //JoinQueue
@@ -151,6 +149,9 @@ namespace LobbyControl
                     ,"After how much time discard a hanging connection");
                 JoinQueue.ConnectionDelay = config.Bind("JoinQueue","connection_timeout_ms",500L
                     ,"After how much time discard a hanging connection");
+                //AlternateLightningParticles
+                LightingParticle.Enabled = config.Bind("AlternateLightningParticles","enabled",false
+                    ,"use sphere shape for lightning particles ");
 
                 //remove unused options
                 PropertyInfo orphanedEntriesProp = config.GetType().GetProperty("OrphanedEntries", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -226,6 +227,11 @@ namespace LobbyControl
                 internal static ConfigEntry<bool> Enabled;
                 internal static ConfigEntry<long> ConnectionTimeout;
                 internal static ConfigEntry<long> ConnectionDelay;
+            }
+            
+            internal static class LightingParticle
+            {
+                internal static ConfigEntry<bool> Enabled;
             }
         }
 

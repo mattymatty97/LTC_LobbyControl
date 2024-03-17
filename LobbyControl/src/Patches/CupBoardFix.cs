@@ -85,7 +85,7 @@ namespace LobbyControl.Patches
                     Vector3 newPos;
                     if (LobbyControl.PluginConfig.ItemClipping.Enabled.Value)
                     {
-                        newPos = ItemClippingPatch.FixPlacement(closest.Value, found.transform, grabbable);
+                        newPos = ItemPatches.FixPlacement(closest.Value, found.transform, grabbable);
                     }
                     else
                     {
