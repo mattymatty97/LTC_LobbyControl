@@ -411,6 +411,7 @@ namespace LobbyControl.Patches
 
         internal static Bounds? CalculateColliderBounds(GameObject go)
         {
+            MakeMeshReadable(go);
             MeshFilter[] meshFilters;
             var filter = go.GetComponent<MeshFilter>();
             if (filter != null)
