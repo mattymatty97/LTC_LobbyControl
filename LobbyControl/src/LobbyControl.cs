@@ -85,20 +85,6 @@ namespace LobbyControl
             {
                 var config = plugin.Config;
                 //Initialize Configs
-                //CupBoard
-                CupBoard.Enabled = config.Bind("CupBoard","enabled",true
-                    ,"prevent items inside or above the Storage Closet from falling to the ground");
-                CupBoard.Tolerance = config.Bind("CupBoard","tolerance",0.05f
-                    ,"how loosely \"close\" the items have to be to the top of the closet for them to count X/Z");
-                CupBoard.Shift = config.Bind("CupBoard","shift",0.1f
-                    ,"how much move the items inside the closet on load ( only if ItemClippingFix disabled )");
-                //Radar
-                Radar.Enabled = config.Bind("Radar","enabled",true
-                    ,"remove orphan radar icons from deleted/collected scrap");
-                Radar.RemoveDeleted = config.Bind("Radar","deleted_scrap",true
-                    ,"remove orphan radar icons from deleted scrap ( company building )");
-                Radar.RemoveOnShip = config.Bind("Radar","ship_loot",true
-                    ,"remove orphan radar icons from scrap on the ship in a recently created game");
                 //ItemSync
                 ItemSync.GhostItems = config.Bind("ItemSync","ghost_items",true
                     ,"prevent the creation of non-grabbable items in case of inventory desync");
@@ -112,15 +98,6 @@ namespace LobbyControl
                     ,"sync held object upon interaction");
                 ItemSync.SyncIgnoreBattery = config.Bind("ItemSync","sync_ignore_battery",true
                     ,"ignore battery powered items (compatibility with flashlight toggle mods)");
-                //ItemClipping
-                ItemClipping.Enabled = config.Bind("ItemClipping","enabled",true
-                    ,"fix rotation and height of various items when on the Ground");
-                ItemClipping.RotateOnSpawn = config.Bind("ItemClipping","rotate_on_spawn",true
-                    ,"fix rotation of newly spawned items");
-                ItemClipping.VerticalOffset = config.Bind("ItemClipping","vertical_offset",0f
-                    ,"additional y offset for items on the ground");
-                ItemClipping.ManualOffsets = config.Bind("ItemClipping","manual_offsets","Comedy:0.085,Tragedy:0.085"
-                    ,"y offset for items on the ground");
                 //SaveLimit
                 SaveLimit.Enabled = config.Bind("SaveLimit","enabled",true
                     ,"remove the limit to the amount of items that can be saved");
@@ -130,11 +107,6 @@ namespace LobbyControl
                 //SteamLobby
                 SteamLobby.AutoLobby = config.Bind("SteamLobby","auto_lobby",false
                     ,"automatically reopen the lobby as soon as you reach orbit");
-                //OutOfBounds
-                OutOfBounds.Enabled = config.Bind("OutOfBounds","enabled",true
-                    ,"prevent items from falling below the ship");
-                OutOfBounds.VerticalOffset = config.Bind("OutOfBounds","vertical_offset",0.2f
-                    ,"vertical offset to apply to objects on load");
                 //LogSpam
                 LogSpam.Enabled = config.Bind("LogSpam","enabled",true
                     ,"prevent some annoying log spam");
@@ -149,9 +121,6 @@ namespace LobbyControl
                     ,"After how much time discard a hanging connection");
                 JoinQueue.ConnectionDelay = config.Bind("JoinQueue","connection_timeout_ms",500L
                     ,"After how much time discard a hanging connection");
-                //AlternateLightningParticles
-                LightingParticle.Enabled = config.Bind("AlternateLightningParticles","enabled",false
-                    ,"use sphere shape for lightning particles ");
 
                 //remove unused options
                 PropertyInfo orphanedEntriesProp = config.GetType().GetProperty("OrphanedEntries", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -166,20 +135,7 @@ namespace LobbyControl
             {
                 internal static ConfigEntry<bool> AutoLobby;
             }
-            
-            internal static class CupBoard
-            {
-                internal static ConfigEntry<bool> Enabled;
-                internal static ConfigEntry<float> Tolerance;
-                internal static ConfigEntry<float> Shift;
-            }
-            internal static class Radar
-            {
-                internal static ConfigEntry<bool> Enabled;
-                internal static ConfigEntry<bool> RemoveDeleted;
-                internal static ConfigEntry<bool> RemoveOnShip;
-            }
-            
+
             internal static class ItemSync
             {
                 internal static ConfigEntry<bool> GhostItems;
@@ -190,14 +146,6 @@ namespace LobbyControl
                 internal static ConfigEntry<bool> SyncIgnoreBattery;
             }
             
-            internal static class ItemClipping
-            {
-                internal static ConfigEntry<bool> Enabled;
-                internal static ConfigEntry<bool> RotateOnSpawn;
-                internal static ConfigEntry<float> VerticalOffset;
-                internal static ConfigEntry<string> ManualOffsets;
-            }
-            
             internal static class SaveLimit
             {
                 internal static ConfigEntry<bool> Enabled;
@@ -206,12 +154,6 @@ namespace LobbyControl
             internal static class InvisiblePlayer
             {
                 internal static ConfigEntry<bool> Enabled;
-            }
-            
-            internal static class OutOfBounds
-            {
-                internal static ConfigEntry<bool> Enabled;
-                internal static ConfigEntry<float> VerticalOffset;
             }
             
             internal static class LogSpam
@@ -227,11 +169,7 @@ namespace LobbyControl
                 internal static ConfigEntry<long> ConnectionTimeout;
                 internal static ConfigEntry<long> ConnectionDelay;
             }
-            
-            internal static class LightingParticle
-            {
-                internal static ConfigEntry<bool> Enabled;
-            }
+
         }
 
     }
