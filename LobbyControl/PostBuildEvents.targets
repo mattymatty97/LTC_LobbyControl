@@ -17,14 +17,18 @@
         <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all"/>
 
         <!-- Publicize directly when referencing -->
-        <Reference Include="..\Dependencies\Assembly-CSharp.dll" Publicize="true"/>
-        <Reference Include="..\Dependencies\Assembly-CSharp-firstpass.dll" Publicize="true"/>
-        <Reference Include="..\Dependencies\Facepunch.Steamworks.Win64.dll" Publicize="true"/>
-        <Reference Include="..\Dependencies\Unity.Netcode.Runtime.dll" Publicize="true"/>
-        <Reference Include="..\Dependencies\Unity.Netcode.Components.dll" Publicize="true"/>
+        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\Assembly-CSharp.dll" Publicize="true"/>
+        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\Assembly-CSharp-firstpass.dll" Publicize="true"/>
+        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\Facepunch.Steamworks.Win64.dll" Publicize="true"/>
+        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\Unity.Netcode.Runtime.dll" Publicize="true"/>
+        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\Unity.Netcode.Components.dll" Publicize="true"/>
 
         <!-- clean referencing -->
-        <Reference Include="..\Dependencies\Unity.TextMeshPro.dll" Publicize="false"/>
+        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\Unity.TextMeshPro.dll" Publicize="false"/>
+        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.CoreModule.dll" Publicize="false"/>
+        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.UIModule.dll" Publicize="false"/>
+        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.AnimationModule.dll" Publicize="false"/>
+        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.PhysicsModule.dll" Publicize="false"/>
 </ItemGroup>
 
 <!-- Ensure the user (you!) has actually set everything up properly. -->
@@ -41,11 +45,11 @@
     <Import Project="$(GameDirTargetsFullPath)" Condition="Exists('$(GameDirTargetsFullPath)')"/>
     <!-- Ensure that the defined game directory path is valid. -->
     <Target Name="EnsureGameDirectoryExists" AfterTargets="EnsureGameDirectoryDefined">
-        <Error Condition="!Exists('$(GameDirectory)')" Text="$(GameDirError)"/>
+        <Error Condition="!Exists('$(ModDirectory)')" Text="$(GameDirError)"/>
     </Target>
     <PropertyGroup>
         <!-- The mod directory to install our mod to. -->
-        <ModDirectory>$(GameDirectory)\BepInEx\plugins\0-$(AssemblyName)</ModDirectory>
+        <ModDirectory>$(ModDirectory)\BepInEx\plugins\0-$(AssemblyName)</ModDirectory>
         <!-- Where to create the temporary directory for creating the release zip files. -->
         <TempZipDir>$(OutputPath)ZipMeUp</TempZipDir>
         <!-- The internal structure of the zip file. -->
