@@ -28,29 +28,16 @@ Patches:
   ( vanilla = 45 )
   - **removed** limit to amount of scrap that can be synchronized  
   ( vanilla = 250 )
-- ### Storage Cabinet
-  - **fix items inside of Storage Cabinet falling to the ground on load**
-  - **fix items on top of Storage Cabinet falling to the ground on load**
-- ### ItemClippingFix
-  - **fix rotation of some items while dropped**
-  - **prevent items from clipping into the ground**
-- ### RadarFixes
-  - **fix orphaned radar icons from deleted scrap**  
-  ( scarp sold will appear on the radar in all the maps )
-  - **fix items from a newly created lobby being visible on the radar**
 - ### InvisibleManFix
   - **fix for late joining player being invisible if the previous owner of the body disconnected while dead**
 - ### ItemSyncFix
   - prevent clients with **extra inventory** from generating unpickable items
   - fix **shotguns disappearing** if client reloads while de-synced
-- ### OutOfBounds Patch
-  - prevent items from falling **below of the ship**
 - ### JoinQueue:
   - process incoming connections as a queue to prevent two clients connecting at the same time
 - ### LogSpam:
   - fix the causes of some spammy error messages
     - stop **CalculatePolygonPath** when enemies die
-    - fix lightning particles (**ZeroSurfaceArea**)
 - ### Others:
   - Prevent host crashes when an extra player tries to join when the lobby is already full but the last player has not finished joining 
 
@@ -78,24 +65,10 @@ Differences to [ShipLobby](https://thunderstore.io/c/lethal-company/p/tinyhoot/S
 This mod started as a Fork of ShipLobby
 and instead of always reopening the lobby it allows the host to decide if and when with terminal commands
 
-Differences to [ItemClippingFix](https://thunderstore.io/c/lethal-company/p/ViViKo/ItemClippingFix/)
-------------------------
-This mod uses the same values from ItemClippingFix but additionally:
-- fixes the rotation of Objects in a newly hosted game  
-- fixes items clipping into the ground ( included modded ones )
-
 Differences to [MoreItems](https://thunderstore.io/c/lethal-company/p/Drakorle/MoreItems/)
 ------------------------
 MoreItems simply sets the max amount of items to the arbitrary value of 999.  
 This mod instead removes the limit entirely, additionally it also allows you to sync the scrap value of all those items
-
-Differences to [CupboardFix](https://thunderstore.io/c/lethal-company/p/Rocksnotch/CupboardFix/)
-------------------------
-CupboardFix removes the gravity from all item types that are above the ground and never resets it,  
-this causes a lot of items to spawn floating both from the DropShip and inside the Factory.  
-This mod instead only affects the items specifically inside the Closet and above it,  
-additionally snaps the items to the shelves and forces the parent to the closet itself allowing you to move them together with the closet,  
-as would happen if you had deposited the items manually inside 
 
 Installation
 ------------

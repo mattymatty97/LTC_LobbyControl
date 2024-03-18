@@ -48,9 +48,6 @@ namespace LobbyControl.Patches
             }
             
         }
-        /*
-*/
-        
 
     }
 }
