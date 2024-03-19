@@ -117,9 +117,9 @@ namespace LobbyControl
                 //JoinQueue
                 JoinQueue.Enabled = config.Bind("JoinQueue","enabled",true
                     ,"handle joining players as a queue instead of at the same time");
-                JoinQueue.ConnectionTimeout = config.Bind("JoinQueue","connection_timeout_ms",30000L
+                JoinQueue.ConnectionTimeout = config.Bind("JoinQueue","connection_timeout_ms",3000L
                     ,"After how much time discard a hanging connection");
-                JoinQueue.ConnectionDelay = config.Bind("JoinQueue","connection_timeout_ms",500L
+                JoinQueue.ConnectionDelay = config.Bind("JoinQueue","connection_delay_ms",500L
                     ,"After how much time discard a hanging connection");
 
                 //remove unused options
