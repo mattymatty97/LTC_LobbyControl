@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using GameNetcodeStuff;
 using HarmonyLib;
+using LobbyControl.Dependency;
 using Unity.Netcode;
 
 namespace LobbyControl.Patches
@@ -59,6 +60,11 @@ namespace LobbyControl.Patches
                             labels = codes[i - 2].labels,
                             blocks = codes[i - 2].blocks
                         };
+                        codes.Insert( i - 2, new CodeInstruction(OpCodes.Ldarg_1)
+                        {
+                            blocks = codes[i - 2].blocks
+                        });
+                        i++;
                         LobbyControl.Log.LogDebug("Patched GrabObjectServerRpc 1!!");
                     }
 
@@ -91,10 +97,22 @@ namespace LobbyControl.Patches
                 return grabbable.heldByPlayerOnServer && (!flag || grabbable.playerHeldBy != instance);
             }
 
-            private static bool CheckGrab(PlayerControllerB controllerB)
+            private static bool CheckGrab(PlayerControllerB controllerB, NetworkObjectReference currentlyGrabbing)
             {
+                
                 if (!LobbyControl.PluginConfig.ItemSync.GhostItems.Value)
                     return true;
+                if (ReservedItemSlotChecker.Enabled && currentlyGrabbing.TryGet(out var networkObject))
+                {
+                   var grabbableObject = networkObject.GetComponentInChildren<GrabbableObject>();
+                   if (grabbableObject != null &&
+                       ReservedItemSlotChecker.HasEmptySlotForReservedItem(controllerB, grabbableObject))
+                   {
+                       LobbyControl.Log.LogDebug(
+                           $"Attempted Grab for {controllerB.playerUsername}, was Reserved slot");
+                       return true;
+                   }
+                }
 
                 var slot = controllerB.FirstEmptyItemSlot();
                 var flag = slot < controllerB.ItemSlots.Length && slot >= 0;
@@ -149,7 +167,7 @@ namespace LobbyControl.Patches
                 
                 LobbyControl.Log.LogWarning($"{__instance.playerUsername} was found de-synced while reloading shotgun! attempting sync.");
                                 
-                if (shotgunSlot != __instance.currentItemSlot && !LobbyControl.PluginConfig.ItemSync.SyncIgnoreSlots.Value.Split(',').Contains(shotgunSlot.ToString()))
+                if (!ReservedItemSlotChecker.Enabled || !ReservedItemSlotChecker.CheckIfReservedItemSlot(__instance, shotgunSlot))
                     __instance.SwitchToItemSlot(shotgunSlot);
                 
                 //give the client the same slot back
@@ -195,7 +213,7 @@ namespace LobbyControl.Patches
                     return;
                 if (!LobbyControl.PluginConfig.ItemSync.SyncOnUse.Value)
                     return;
-                if(__instance.itemProperties.requiresBattery && LobbyControl.PluginConfig.ItemSync.SyncIgnoreBattery.Value)
+                if(LobbyControl.PluginConfig.ItemSync.SyncIgnoreName.Value.Split(',').Contains(__instance.itemProperties.itemName))
                     return;
 
                 if (__instance == __instance.playerHeldBy.currentlyHeldObjectServer)
@@ -215,7 +233,7 @@ namespace LobbyControl.Patches
                 if (itemSlot == -1)
                     return;
                 
-                if (LobbyControl.PluginConfig.ItemSync.SyncIgnoreSlots.Value.Split(',').Contains(itemSlot.ToString()))
+                if (ReservedItemSlotChecker.Enabled && ReservedItemSlotChecker.CheckIfReservedItemSlot(__instance.playerHeldBy, itemSlot))
                     return;
                 
                 LobbyControl.Log.LogWarning($"{__instance.playerHeldBy.playerUsername} was found de-synced while using an item! attempting sync.");
@@ -233,7 +251,7 @@ namespace LobbyControl.Patches
                     return;
                 if (!LobbyControl.PluginConfig.ItemSync.SyncOnInteract.Value)
                     return;
-                if(__instance.itemProperties.requiresBattery && LobbyControl.PluginConfig.ItemSync.SyncIgnoreBattery.Value)
+                if(LobbyControl.PluginConfig.ItemSync.SyncIgnoreName.Value.Split(',').Contains(__instance.itemProperties.itemName))
                     return;
 
                 if (__instance == __instance.playerHeldBy.currentlyHeldObject)
@@ -253,7 +271,7 @@ namespace LobbyControl.Patches
                 if (itemSlot == -1)
                     return;
                 
-                if (LobbyControl.PluginConfig.ItemSync.SyncIgnoreSlots.Value.Split(',').Contains(itemSlot.ToString()))
+                if (ReservedItemSlotChecker.Enabled && ReservedItemSlotChecker.CheckIfReservedItemSlot(__instance.playerHeldBy, itemSlot))
                     return;
                 
                 LobbyControl.Log.LogWarning($"{__instance.playerHeldBy.playerUsername} was found de-synced while interacting with an item! attempting sync.");

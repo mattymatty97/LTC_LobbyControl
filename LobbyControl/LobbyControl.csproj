@@ -36,6 +36,7 @@
         <ExcludeGeneratedDebugSymbol>False</ExcludeGeneratedDebugSymbol>
     </PropertyGroup>
     <ItemGroup>
+        <Compile Include="src\Dependency\ReservedItemSlotChecker.cs" />
         <Compile Include="src\LobbyControl.cs" />
         <Compile Include="src\Patches\DebugPatches.cs" />
         <Compile Include="src\Patches\ItemSyncPatches.cs" />
@@ -59,6 +60,9 @@
         <Content Include="GameDirectory.targets.example" />
         <Content Include="Output\Experimental\clipboard.txt" />
         <Content Include="PostBuildEvents.targets"/>
+    </ItemGroup>
+    <ItemGroup>
+      <PackageReference Include="System.Runtime" Version="4.3.1" />
     </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets"/>
     <Import Project="PostBuildEvents.targets"/>

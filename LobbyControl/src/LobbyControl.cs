@@ -17,11 +17,12 @@ namespace LobbyControl
     [BepInDependency("com.github.tinyhoot.ShipLobby", Flags:BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("twig.latecompany", Flags:BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("com.potatoepet.AdvancedCompany", Flags:BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("FlipMods.ReservedItemSlotCore", Flags:BepInDependency.DependencyFlags.SoftDependency)]
     internal class LobbyControl : BaseUnityPlugin
     {
         public const string GUID = "mattymatty.LobbyControl";
         public const string NAME = "LobbyControl";
-        public const string VERSION = "2.3.1";
+        public const string VERSION = "2.3.2";
 
         internal static ManualLogSource Log;
 
@@ -96,10 +97,8 @@ namespace LobbyControl
                     ,"sync held object upon usage");
                 ItemSync.SyncOnInteract = config.Bind("ItemSync","sync_on_interact",false
                     ,"sync held object upon interaction");
-                ItemSync.SyncIgnoreBattery = config.Bind("ItemSync","sync_ignore_battery",true
-                    ,"ignore battery powered items (compatibility with flashlight toggle mods)");
-                ItemSync.SyncIgnoreSlots = config.Bind("ItemSync","sync_ignore_slots","4,5,6,7,8"
-                    ,"ignore items that are in the listed slots (compatibility with ReservedSlots)");
+                ItemSync.SyncIgnoreName = config.Bind("ItemSync","sync_ignore_name","Flashlight,Pro-flashlight,Laser pointer"
+                    ,"do not attempt sync on items that are in the list (compatibility with FlashLight toggle, ecc)");
                 //SaveLimit
                 SaveLimit.Enabled = config.Bind("SaveLimit","enabled",true
                     ,"remove the limit to the amount of items that can be saved");
@@ -145,8 +144,7 @@ namespace LobbyControl
                 internal static ConfigEntry<bool> ShotGunReload;
                 internal static ConfigEntry<bool> SyncOnUse;
                 internal static ConfigEntry<bool> SyncOnInteract;
-                internal static ConfigEntry<bool> SyncIgnoreBattery;
-                internal static ConfigEntry<string> SyncIgnoreSlots;
+                internal static ConfigEntry<string> SyncIgnoreName;
             }
             
             internal static class SaveLimit
