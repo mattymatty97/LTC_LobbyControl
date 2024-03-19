@@ -120,7 +120,7 @@ namespace LobbyControl
                 JoinQueue.ConnectionTimeout = config.Bind("JoinQueue","connection_timeout_ms",3000L
                     ,"After how much time discard a hanging connection");
                 JoinQueue.ConnectionDelay = config.Bind("JoinQueue","connection_delay_ms",500L
-                    ,"After how much time discard a hanging connection");
+                    ,"Delay between each successful connection");
 
                 //remove unused options
                 PropertyInfo orphanedEntriesProp = config.GetType().GetProperty("OrphanedEntries", BindingFlags.NonPublic | BindingFlags.Instance);
