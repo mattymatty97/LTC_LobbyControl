@@ -148,7 +148,9 @@ namespace LobbyControl.Patches
                     return true;
                 
                 LobbyControl.Log.LogWarning($"{__instance.playerUsername} was found de-synced while reloading shotgun! attempting sync.");
-                __instance.SwitchToItemSlot(shotgunSlot);
+                                
+                if (shotgunSlot != __instance.currentItemSlot && !LobbyControl.PluginConfig.ItemSync.SyncIgnoreSlots.Value.Split(',').Contains(shotgunSlot.ToString()))
+                    __instance.SwitchToItemSlot(shotgunSlot);
                 
                 //give the client the same slot back
                 ClientRpcParams clientRpcParams = new ClientRpcParams
@@ -213,6 +215,9 @@ namespace LobbyControl.Patches
                 if (itemSlot == -1)
                     return;
                 
+                if (LobbyControl.PluginConfig.ItemSync.SyncIgnoreSlots.Value.Split(',').Contains(itemSlot.ToString()))
+                    return;
+                
                 LobbyControl.Log.LogWarning($"{__instance.playerHeldBy.playerUsername} was found de-synced while using an item! attempting sync.");
                 __instance.playerHeldBy.SwitchToItemSlot(itemSlot);
             }
@@ -246,6 +251,9 @@ namespace LobbyControl.Patches
                 }
 
                 if (itemSlot == -1)
+                    return;
+                
+                if (LobbyControl.PluginConfig.ItemSync.SyncIgnoreSlots.Value.Split(',').Contains(itemSlot.ToString()))
                     return;
                 
                 LobbyControl.Log.LogWarning($"{__instance.playerHeldBy.playerUsername} was found de-synced while interacting with an item! attempting sync.");

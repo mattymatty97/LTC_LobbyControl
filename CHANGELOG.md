@@ -1,3 +1,6 @@
+## v2.3.1
+- added config option to whitelist "desync" slots (compatibility with reserved slots)
+
 ## v2.3.0
 - added LogSpam fixes (CalculatePolygonPath)
 - renamed GhostItems to ItemSync

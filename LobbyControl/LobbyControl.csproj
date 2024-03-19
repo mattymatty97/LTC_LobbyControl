@@ -58,8 +58,6 @@
         <Content Include="GameDirectory.targets"/>
         <Content Include="GameDirectory.targets.example" />
         <Content Include="Output\Experimental\clipboard.txt" />
-        <Content Include="Output\Experimental\LobbyControl-3.0.21.zip" />
-        <Content Include="Output\Experimental\LobbyControl-3.0.22.zip" />
         <Content Include="PostBuildEvents.targets"/>
     </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets"/>
