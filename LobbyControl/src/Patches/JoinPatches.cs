@@ -193,9 +193,11 @@ namespace LobbyControl.Patches
                     {
                         LobbyControl.Log.LogWarning($"Connection request Resumed! remaining: {ConnectionQueue.Count}");
                         response.Pending = false;
+                        if (!response.Approved)
+                            return;
                         _currentConnectingPlayerConfirmations = new bool[2];
                         _currentConnectingPlayer = 0L;
-                        _currentConnectingExpiration = (ulong)Environment.TickCount + 5000UL;
+                        _currentConnectingExpiration = (ulong)Environment.TickCount + 1000UL;
                     }
                 }
             }

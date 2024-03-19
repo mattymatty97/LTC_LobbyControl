@@ -3,7 +3,6 @@
 - renamed GhostItems to ItemSync
   - added patch to fix shotguns disappearing if client has de-synced inventory
   - added patch to allow clients to pick up items that already belong to them
-- added patch to prevent "Man In The Wall" bug
 - fix scrap not having value/wrong state after hotload
 - Yeet dependencies :D
 

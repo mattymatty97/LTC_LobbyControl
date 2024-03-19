@@ -12,22 +12,6 @@ namespace LobbyControl.Patches
     [HarmonyPatch]
     internal class TransparentPlayerFix
     {
-        private static readonly MethodInfo StartOfRoundBeginSendClientRpc =
-            typeof(StartOfRound).GetMethod(nameof(StartOfRound.__beginSendClientRpc),
-                BindingFlags.NonPublic | BindingFlags.Instance);
-
-        private static readonly MethodInfo StartOfRoundEndSendClientRpc =
-            typeof(StartOfRound).GetMethod(nameof(StartOfRound.__endSendClientRpc),
-                BindingFlags.NonPublic | BindingFlags.Instance);
-
-        private static readonly MethodInfo PlayerControllerBBeginSendClientRpc =
-            typeof(PlayerControllerB).GetMethod(nameof(PlayerControllerB.__beginSendClientRpc),
-                BindingFlags.NonPublic | BindingFlags.Instance);
-
-        private static readonly MethodInfo PlayerControllerBEndSendClientRpc =
-            typeof(PlayerControllerB).GetMethod(nameof(PlayerControllerB.__endSendClientRpc),
-                BindingFlags.NonPublic | BindingFlags.Instance);
-
         private static readonly Dictionary<ulong, int> ToRespawn = new Dictionary<ulong, int>();
         private static readonly Dictionary<ulong, int> ToDisconnect = new Dictionary<ulong, int>();
 
@@ -138,8 +122,7 @@ namespace LobbyControl.Patches
                 {
                     var controller = __instance.allPlayerScripts[dcPlayer.Value];
                     //client Join
-                    var bufferWriter = (FastBufferWriter)StartOfRoundBeginSendClientRpc.Invoke(__instance,
-                        new object[] { 886676601U, clientRpcParams, RpcDelivery.Reliable });
+                    var bufferWriter = __instance.__beginSendClientRpc(886676601U, clientRpcParams, RpcDelivery.Reliable);
                     BytePacker.WriteValueBitPacked(bufferWriter, dcPlayer.Key);
                     BytePacker.WriteValueBitPacked(bufferWriter, connectedPlayers + count);
                     bufferWriter.WriteValueSafe(true);
@@ -152,20 +135,17 @@ namespace LobbyControl.Patches
                     BytePacker.WriteValueBitPacked(bufferWriter, quotaFulfilled);
                     BytePacker.WriteValueBitPacked(bufferWriter, randomSeed);
                     bufferWriter.WriteValueSafe(in isChallenge);
-                    StartOfRoundEndSendClientRpc.Invoke(__instance,
-                        new object[] { bufferWriter, 886676601U, clientRpcParams, RpcDelivery.Reliable });
+                    __instance.__endSendClientRpc(ref bufferWriter, 886676601U, clientRpcParams, RpcDelivery.Reliable);
                     LobbyControl.Log.LogInfo($"Player {controller.playerUsername} has been reconnected by host");
 
                     //Client Kill
-                    bufferWriter = (FastBufferWriter)PlayerControllerBBeginSendClientRpc.Invoke(controller,
-                        new object[] { 168339603U, clientRpcParams, RpcDelivery.Reliable });
+                    bufferWriter = controller.__beginSendClientRpc(168339603U, clientRpcParams, RpcDelivery.Reliable);
                     BytePacker.WriteValueBitPacked(bufferWriter, dcPlayer.Value);
                     bufferWriter.WriteValueSafe(false);
                     bufferWriter.WriteValueSafe(Vector3.zero);
                     BytePacker.WriteValueBitPacked(bufferWriter, (int)CauseOfDeath.Kicking);
                     BytePacker.WriteValueBitPacked(bufferWriter, 0);
-                    PlayerControllerBEndSendClientRpc.Invoke(controller,
-                        new object[] { bufferWriter, 168339603U, clientRpcParams, RpcDelivery.Reliable });
+                    controller.__endSendClientRpc(ref bufferWriter, 168339603U, clientRpcParams, RpcDelivery.Reliable);
                     LobbyControl.Log.LogInfo($"Player {controller.playerUsername} has been killed by host");
 
                     ToDisconnect[dcPlayer.Key] = dcPlayer.Value;
@@ -212,13 +192,7 @@ namespace LobbyControl.Patches
                 foreach (KeyValuePair<ulong, int> player in new Dictionary<ulong, int>(ToDisconnect))
                 {
                     var controller = startOfRound.allPlayerScripts[player.Value];
-                    //__instance.OnClientDisconnectClientRpc(player.Value, player.Key, clientRpcParams);
-                    var bufferWriter = (FastBufferWriter)StartOfRoundBeginSendClientRpc.Invoke(startOfRound,
-                        new object[] { 475465488U, clientRpcParams, RpcDelivery.Reliable });
-                    BytePacker.WriteValueBitPacked(bufferWriter, player.Value);
-                    BytePacker.WriteValueBitPacked(bufferWriter, player.Key);
-                    StartOfRoundEndSendClientRpc.Invoke(startOfRound,
-                        new object[] { bufferWriter, 475465488U, clientRpcParams, RpcDelivery.Reliable });
+                    startOfRound.OnClientDisconnectClientRpc(player.Value, player.Key, clientRpcParams);
                     LobbyControl.Log.LogInfo(
                         $"Player {controller.playerUsername} has been removed and should be visible to {client.playerUsername}");
                 }

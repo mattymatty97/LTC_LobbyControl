@@ -26,18 +26,5 @@ namespace LobbyControl.Patches
                 return __exception;
             }
         }
-
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.LateUpdate))]
-        private static void PatchWallPlayer(StartOfRound __instance)
-        {
-            if (__instance.ClientPlayerList.TryGetValue(NetworkManager.Singleton.LocalClientId, out var objectIndex))
-            {
-                var gameObject = __instance.allPlayerObjects[objectIndex];
-                if (!gameObject.activeSelf)
-                    gameObject.SetActive(true);
-            }
-        }
-        
     }
 }

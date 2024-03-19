@@ -60,14 +60,7 @@
         <Content Include="Output\Experimental\clipboard.txt" />
         <Content Include="Output\Experimental\LobbyControl-3.0.21.zip" />
         <Content Include="Output\Experimental\LobbyControl-3.0.22.zip" />
-        <Content Include="Output\Experimental\LobbyControl-3.0.23.zip" />
         <Content Include="PostBuildEvents.targets"/>
-    </ItemGroup>
-    <ItemGroup>
-        <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1"/>
-        <PackageReference Include="BepInEx.Core" Version="5.4.21" />
-        <PackageReference Include="HarmonyX" Version="2.5.5"/>
-        <PackageReference Include="Mono.Cecil" Version="0.11.4"/>
     </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets"/>
     <Import Project="PostBuildEvents.targets"/>

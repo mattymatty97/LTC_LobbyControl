@@ -24,6 +24,8 @@
         <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\Unity.Netcode.Components.dll" Publicize="true"/>
 
         <!-- clean referencing -->
+        <Reference Include="$(ProfileDirectory)\BepInEx\core\0Harmony.dll" Publicize="false"/>
+        <Reference Include="$(ProfileDirectory)\BepInEx\core\BepInEx.dll" Publicize="false"/>
         <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\Unity.TextMeshPro.dll" Publicize="false"/>
         <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.dll" Publicize="false"/>
         <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.CoreModule.dll" Publicize="false"/>

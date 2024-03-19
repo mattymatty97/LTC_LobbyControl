@@ -577,10 +577,7 @@ Extra:
             node.maxCharactersToType = node.displayText.Length + 2;
             return node;
         }
-
-        private static readonly MethodInfo BeginSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__beginSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
-        private static readonly MethodInfo EndSendClientRpc = typeof(StartOfRound).GetMethod(nameof(StartOfRound.__endSendClientRpc), BindingFlags.NonPublic | BindingFlags.Instance);
-
+        
         // ReSharper disable Unity.PerformanceAnalysis
         private static IEnumerator LoadLobbyCoroutine()
         {
@@ -719,11 +716,9 @@ Extra:
                         var unlockable = startOfRound.unlockablesList.unlockables[baseUnlockable];
                         if (unlockable.alreadyUnlocked && !unlockable.inStorage)
                         {
-                            FastBufferWriter bufferWriter = (FastBufferWriter)BeginSendClientRpc.Invoke(startOfRound,
-                                new object[] { 1076853239U, clientRpcParams, RpcDelivery.Reliable });
+                            FastBufferWriter bufferWriter = startOfRound.__beginSendClientRpc(1076853239U, clientRpcParams, RpcDelivery.Reliable);
                             BytePacker.WriteValueBitPacked(bufferWriter, baseUnlockable);
-                            EndSendClientRpc.Invoke(startOfRound,
-                                new object[] { bufferWriter, 1076853239U, clientRpcParams, RpcDelivery.Reliable });
+                            startOfRound.__endSendClientRpc(ref bufferWriter, 1076853239U, clientRpcParams, RpcDelivery.Reliable);
                         }
                     }
 
@@ -767,7 +762,7 @@ Extra:
             var timeUntilDeadline = (int)TimeOfDay.Instance.timeUntilDeadline;
             var controller = StartOfRound.Instance.localPlayerController;
 
-            FastBufferWriter bufferWriter = (FastBufferWriter)BeginSendClientRpc.Invoke(startOfRound, new object[]{886676601U, clientRpcParams, RpcDelivery.Reliable});
+            FastBufferWriter bufferWriter = startOfRound.__beginSendClientRpc(886676601U, clientRpcParams, RpcDelivery.Reliable);
             BytePacker.WriteValueBitPacked(bufferWriter, controller.actualClientId);
             BytePacker.WriteValueBitPacked(bufferWriter, startOfRound.connectedPlayersAmount - 1);
             bufferWriter.WriteValueSafe<bool>(true);
@@ -779,8 +774,8 @@ Extra:
             BytePacker.WriteValueBitPacked(bufferWriter, timeUntilDeadline);
             BytePacker.WriteValueBitPacked(bufferWriter, quotaFulfilled);
             BytePacker.WriteValueBitPacked(bufferWriter,  startOfRound.randomMapSeed);
-            bufferWriter.WriteValueSafe<bool>(in startOfRound.isChallengeFile, new FastBufferWriter.ForPrimitives());
-            EndSendClientRpc.Invoke(startOfRound, new object[]{bufferWriter, 886676601U, clientRpcParams, RpcDelivery.Reliable});
+            bufferWriter.WriteValueSafe<bool>(in startOfRound.isChallengeFile);
+            startOfRound.__endSendClientRpc(ref bufferWriter, 886676601U, clientRpcParams, RpcDelivery.Reliable);
 
         }
     }

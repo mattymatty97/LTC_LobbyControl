@@ -8,6 +8,11 @@ LobbyControl
 A collection of Patches for Lethal Company with Quality of life changes for the Host.
 
 **This mod is 100% Vanilla Compatible** and does not change any of the vanilla gameplay.
+only **the host** needs this mod installed
+
+Lobby Control has split:
+------
+some of the features that are not about hosting have been moved to [Matty's Fixes](https://thunderstore.io/c/lethal-company/p/mattymatty/Matty_Fixes/)
 
 Patches:
 --------
