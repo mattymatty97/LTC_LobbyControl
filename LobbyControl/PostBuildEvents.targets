@@ -32,6 +32,7 @@
         <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.UIModule.dll" Publicize="false"/>
         <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.AnimationModule.dll" Publicize="false"/>
         <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.PhysicsModule.dll" Publicize="false"/>
+        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.AudioModule.dll" Publicize="false"/>
         <Reference Include="..\Dependencies\ReservedItemSlotCore.dll" Publicize="false"/>
 </ItemGroup>
 

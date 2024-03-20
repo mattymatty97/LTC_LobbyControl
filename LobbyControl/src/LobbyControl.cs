@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using BepInEx;
 using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
+using LobbyControl.Dependency;
 using LobbyControl.PopUp;
 using LobbyControl.TerminalCommands;
 using PluginInfo = BepInEx.PluginInfo;
@@ -18,6 +20,7 @@ namespace LobbyControl
     [BepInDependency("twig.latecompany", Flags:BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("com.potatoepet.AdvancedCompany", Flags:BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("FlipMods.ReservedItemSlotCore", Flags:BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("BMX.LobbyCompatibility", Flags:BepInDependency.DependencyFlags.SoftDependency)]
     internal class LobbyControl : BaseUnityPlugin
     {
         public const string GUID = "mattymatty.LobbyControl";
@@ -60,6 +63,9 @@ namespace LobbyControl
                 }
                 else
                 {
+                    if (LobbyCompatibilityChecker.Enabled)
+                        LobbyCompatibilityChecker.Init();
+                    
                     Log.LogInfo("Initializing Configs");
 
                     PluginConfig.Init(this);
@@ -78,8 +84,6 @@ namespace LobbyControl
                 Log.LogError("Exception while initializing: \n" + ex);
             }
         }
-
-
         internal static class PluginConfig
         {
             internal static void Init(BaseUnityPlugin plugin)
@@ -113,14 +117,16 @@ namespace LobbyControl
                     ,"prevent some annoying log spam");
                 LogSpam.CalculatePolygonPath = config.Bind("LogSpam","CalculatePolygonPath",true
                     ,"stop pathfinding for dead Enemies");
+                LogSpam.AudioSpatializer = config.Bind("LogSpam","audio_spatializer",true
+                    ,"disable audio spatialization as there is not spatialization plugin");
                 LogSpam.MoreCompany = config.Bind("LogSpam","more_company",true
                     ,"Remove some leftover Exceptions caused by MoreCompany");
                 //JoinQueue
                 JoinQueue.Enabled = config.Bind("JoinQueue","enabled",true
                     ,"handle joining players as a queue instead of at the same time");
-                JoinQueue.ConnectionTimeout = config.Bind("JoinQueue","connection_timeout_ms",3000L
+                JoinQueue.ConnectionTimeout = config.Bind("JoinQueue","connection_timeout_ms",3000
                     ,"After how much time discard a hanging connection");
-                JoinQueue.ConnectionDelay = config.Bind("JoinQueue","connection_delay_ms",500L
+                JoinQueue.ConnectionDelay = config.Bind("JoinQueue","connection_delay_ms",500
                     ,"Delay between each successful connection");
 
                 //remove unused options
@@ -161,14 +167,15 @@ namespace LobbyControl
             {
                 internal static ConfigEntry<bool> Enabled;
                 internal static ConfigEntry<bool> CalculatePolygonPath;
+                internal static ConfigEntry<bool> AudioSpatializer;
                 internal static ConfigEntry<bool> MoreCompany;
             }
             
             internal static class JoinQueue
             {
                 internal static ConfigEntry<bool> Enabled;
-                internal static ConfigEntry<long> ConnectionTimeout;
-                internal static ConfigEntry<long> ConnectionDelay;
+                internal static ConfigEntry<int> ConnectionTimeout;
+                internal static ConfigEntry<int> ConnectionDelay;
             }
 
         }

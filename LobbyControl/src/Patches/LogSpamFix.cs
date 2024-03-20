@@ -1,8 +1,8 @@
 ﻿using System;
+using BepInEx;
 using HarmonyLib;
 using Unity.Netcode;
 using UnityEngine;
-using LogLevel = BepInEx.Logging.LogLevel;
 
 namespace LobbyControl.Patches
 {
@@ -47,6 +47,35 @@ namespace LobbyControl.Patches
                 return !__instance.isEnemyDead;
             }
             
+        }
+        
+        [HarmonyPatch]
+        internal class AudioSpatializerPatch
+        {
+            [HarmonyPostfix]
+            [HarmonyPatch(typeof(NetworkSceneManager), nameof(NetworkSceneManager.OnSceneLoaded))]
+            private static void DisableSpatializers()
+            {
+                
+                if (!LobbyControl.PluginConfig.LogSpam.AudioSpatializer.Value || !AudioSettings.GetSpatializerPluginName().IsNullOrWhiteSpace())
+                    return;
+                
+                try
+                {
+                    AudioSource[] array = Resources.FindObjectsOfTypeAll<AudioSource>();
+                    foreach (AudioSource val in array)
+                    {
+                        if (val.spatialize)
+                        {
+                            val.spatialize = false;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LobbyControl.Log.LogError($"Exception disabling spatializers: {ex}");
+                }
+            }
         }
 
     }

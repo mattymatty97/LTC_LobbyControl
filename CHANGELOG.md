@@ -1,3 +1,9 @@
+## v2.3.2
+- added native compatibility with ReservedSlotCore
+- removed `sync_ignore_battery` and `sync_ignore_slot` in favor of new `sync_ignore_name`
+- added new LogSpam fix for audio spatializer
+- added LobbyCompatibility soft dependency
+
 ## v2.3.1
 - added config option to whitelist "desync" slots (compatibility with reserved slots)
 

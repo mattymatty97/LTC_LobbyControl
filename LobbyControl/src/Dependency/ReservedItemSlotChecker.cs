@@ -4,7 +4,7 @@ using ReservedItemSlotCore.Data;
 
 namespace LobbyControl.Dependency
 {
-    public class ReservedItemSlotChecker
+    public static class ReservedItemSlotChecker
     {
         public static bool Enabled { get { return BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("FlipMods.ReservedItemSlotCore"); } }
         

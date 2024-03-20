@@ -36,6 +36,7 @@
         <ExcludeGeneratedDebugSymbol>False</ExcludeGeneratedDebugSymbol>
     </PropertyGroup>
     <ItemGroup>
+        <Compile Include="src\Dependency\LobbyCompatibilityChecker.cs" />
         <Compile Include="src\Dependency\ReservedItemSlotChecker.cs" />
         <Compile Include="src\LobbyControl.cs" />
         <Compile Include="src\Patches\DebugPatches.cs" />
@@ -63,6 +64,9 @@
     </ItemGroup>
     <ItemGroup>
       <PackageReference Include="System.Runtime" Version="4.3.1" />
+    </ItemGroup>
+    <ItemGroup>
+      <PackageReference Include="TeamBMX.LobbyCompatibility" Version="1.0.1" />
     </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets"/>
     <Import Project="PostBuildEvents.targets"/>
