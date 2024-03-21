@@ -528,7 +528,7 @@ Extra:
             }
             
             LobbyControl.Log.LogDebug("Clearing Lobby");
-            ES3.DeleteFile(GameNetworkManager.Instance.currentSaveFileName);
+            GameNetworkManager.Instance.ResetSavedGameValues();
 
             var res = LoadCommand(ref node, new string[3]);
             if (res)
@@ -594,16 +594,17 @@ Extra:
                 var itemEntry = startOfRound.unlockablesList.unlockables[unlockable.Key];
                 if (!itemEntry.alreadyUnlocked || !itemEntry.spawnPrefab) 
                     continue;
-                                
+                
                 if(unlockable.Value == null)
                     continue;
-                                
+                
                 NetworkObject component = unlockable.Value.GetComponent<NetworkObject>();
                 if (component != null && component.IsSpawned)
                     component.Despawn();
             }
             startOfRound.SpawnedShipUnlockables.Clear();
             startOfRound.suitsPlaced = 0;
+            GameNetworkManager.Instance.ResetUnlockablesListValues();
             //wait
             yield return new WaitForSeconds(0.2f);
             //read new misc data

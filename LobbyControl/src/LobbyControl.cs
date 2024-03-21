@@ -2,16 +2,18 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using BepInEx;
 using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
-using LobbyControl.Dependency;
+using LobbyCompatibility.Attributes;
+using LobbyCompatibility.Enums;
 using LobbyControl.PopUp;
 using LobbyControl.TerminalCommands;
 using PluginInfo = BepInEx.PluginInfo;
+
+[assembly: SoftLobbyCompatibility(typeof(LobbyControl.LobbyControl), CompatibilityLevel.ServerOnly, VersionStrictness.Minor)]
 
 namespace LobbyControl
 {
@@ -25,7 +27,7 @@ namespace LobbyControl
     {
         public const string GUID = "mattymatty.LobbyControl";
         public const string NAME = "LobbyControl";
-        public const string VERSION = "2.3.2";
+        public const string VERSION = "2.3.3";
 
         internal static ManualLogSource Log;
 
@@ -63,8 +65,6 @@ namespace LobbyControl
                 }
                 else
                 {
-                    if (LobbyCompatibilityChecker.Enabled)
-                        LobbyCompatibilityChecker.Init();
                     
                     Log.LogInfo("Initializing Configs");
 

@@ -35,7 +35,7 @@ namespace LobbyControl.Patches
                             labels = curr.labels,
                             blocks = curr.blocks
                         };
-                        codes[i] = new CodeInstruction(OpCodes.Br_S, dest)
+                        codes[i + 1] = new CodeInstruction(OpCodes.Br_S, dest)
                         {
                             labels = next.labels,
                             blocks = next.blocks

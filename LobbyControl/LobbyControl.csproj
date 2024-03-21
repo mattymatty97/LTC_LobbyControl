@@ -36,7 +36,6 @@
         <ExcludeGeneratedDebugSymbol>False</ExcludeGeneratedDebugSymbol>
     </PropertyGroup>
     <ItemGroup>
-        <Compile Include="src\Dependency\LobbyCompatibilityChecker.cs" />
         <Compile Include="src\Dependency\ReservedItemSlotChecker.cs" />
         <Compile Include="src\LobbyControl.cs" />
         <Compile Include="src\Patches\DebugPatches.cs" />
