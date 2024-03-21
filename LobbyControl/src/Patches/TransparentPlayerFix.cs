@@ -161,6 +161,13 @@ namespace LobbyControl.Patches
 
         [HarmonyPrefix]
         [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.__rpc_handler_3083945322))]
+        private static void ClearRespawningFlag()
+        {
+            _isRespawning = false;
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.__rpc_handler_3083945322))]
         private static void ClearDcPlayerForClient(
             NetworkBehaviour target,
             __RpcParams rpcParams)

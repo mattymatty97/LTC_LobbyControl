@@ -1,3 +1,7 @@
+## v2.3.4
+- maybe fix disconnected players from remaining in the lobby
+- fix minor bug with LobbyCompatibility SoftDependency
+
 ## v2.3.3
 - fix small error in LimitPatcher
 
