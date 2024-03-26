@@ -14,6 +14,7 @@ namespace LobbyControl.TerminalCommands
 {
     public class LobbyCommand: Command
     {
+        
         private const string DefaultText = 
 @"- status        : prints the current lobby status
 
@@ -299,7 +300,7 @@ Extra:
             }
 
             manager.SetLobbyJoinable(false);
-                        
+       
             // Hide the friend invite button in the ESC menu.
             Object.FindObjectOfType<QuickMenuManager>().inviteFriendsTextAlpha.alpha = 0f;
 
@@ -323,6 +324,9 @@ Extra:
             }
 
             manager.currentLobby.Value.SetPrivate();
+            
+            if (AsyncLoggerProxy.Enabled)
+                AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Lobby.Visibility", "Private");
 
             var outText = "Lobby is now Private";
             LobbyControl.Log.LogInfo(outText);
@@ -409,6 +413,10 @@ Extra:
             LobbyControl.Log.LogDebug("Toggling AutoSave");
 
             LobbyControl.CanSave = LobbyControl.AutoSaveEnabled = !LobbyControl.AutoSaveEnabled;
+            
+            
+            if (AsyncLoggerProxy.Enabled)
+                AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Lobby.Autosave", LobbyControl.CanSave.ToString());
 
             var outText = "AutoSaving is now " + (LobbyControl.CanSave ? "On" : "Off");
 
@@ -481,6 +489,10 @@ Extra:
             StartOfRound.Instance.StartCoroutine(LoadLobbyCoroutine());
             LobbyControl.AutoSaveEnabled = LobbyControl.CanSave = ES3.Load("LC_SavingMethod",
                 GameNetworkManager.Instance.currentSaveFileName, true);
+            
+            if (AsyncLoggerProxy.Enabled)
+                AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Lobby.Autosave", LobbyControl.CanSave.ToString());
+            
             LobbyControl.Log.LogInfo(outText);
 
             node.displayText = outText + "\n\n";
@@ -581,6 +593,9 @@ Extra:
         // ReSharper disable Unity.PerformanceAnalysis
         private static IEnumerator LoadLobbyCoroutine()
         {
+            if (AsyncLoggerProxy.Enabled)
+                AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Lobby.Load", $"Starting {GameNetworkManager.Instance.currentSaveFileName}");
+
             var startOfRound = StartOfRound.Instance;
             var terminal = Object.FindObjectOfType<Terminal>();
             //remove all items
@@ -631,6 +646,9 @@ Extra:
                 startOfRound.SyncShipUnlockablesServerRpc();
             }
             GameNetworkManager.Instance.gameHasStarted = mem;
+            
+            if (AsyncLoggerProxy.Enabled)
+                AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Lobby.Load", $"Finshed {GameNetworkManager.Instance.currentSaveFileName}");
         }
 
         private static void ReloadUnlockables()

@@ -20,11 +20,12 @@ namespace LobbyControl
     [BepInDependency("com.potatoepet.AdvancedCompany", Flags:BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("FlipMods.ReservedItemSlotCore", Flags:BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("BMX.LobbyCompatibility", Flags:BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("mattymatty.AsyncLoggers",  Flags:BepInDependency.DependencyFlags.SoftDependency)]
     internal class LobbyControl : BaseUnityPlugin
     {
         public const string GUID = "mattymatty.LobbyControl";
         public const string NAME = "LobbyControl";
-        public const string VERSION = "2.3.4";
+        public const string VERSION = "2.3.5";
 
         internal static ManualLogSource Log;
 
@@ -64,7 +65,8 @@ namespace LobbyControl
                 {
                     if (LobbyCompatibilityChecker.Enabled)
                         LobbyCompatibilityChecker.Init();
-                    
+                    if (AsyncLoggerProxy.Enabled)
+                        AsyncLoggerProxy.WriteEvent(NAME, "Awake", "Initializing");
                     Log.LogInfo("Initializing Configs");
 
                     PluginConfig.Init(this);
@@ -76,6 +78,8 @@ namespace LobbyControl
                     harmony.PatchAll(Assembly.GetExecutingAssembly());
                     
                     Log.LogInfo(NAME + " v" + VERSION + " Loaded!");
+                    if (AsyncLoggerProxy.Enabled)
+                        AsyncLoggerProxy.WriteEvent(NAME, "Awake", "Finished Initializing");
                 }
             }
             catch (Exception ex)

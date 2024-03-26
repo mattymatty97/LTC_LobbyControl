@@ -18,6 +18,9 @@ namespace LobbyControl.Patches
             if (!__runOriginal)
                 return;
             Open[__instance] = (bool)__args[0];
+            
+            if (AsyncLoggerProxy.Enabled)
+                AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Lobby.Status", (bool)__args[0]?"open":"closed");
         }
 
         [HarmonyPostfix]
@@ -27,6 +30,8 @@ namespace LobbyControl.Patches
             if (!__runOriginal)
                 return;
             Visibility[__instance] = LobbyType.Public;
+            if (AsyncLoggerProxy.Enabled)
+                AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Lobby.Visibility", "public");
         }
 
         [HarmonyPostfix]
@@ -36,6 +41,8 @@ namespace LobbyControl.Patches
             if (!__runOriginal)
                 return;
             Visibility[__instance] = LobbyType.Private;
+            if (AsyncLoggerProxy.Enabled)
+                AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Lobby.Visibility", "private");
         }
 
         [HarmonyPostfix]
@@ -45,6 +52,19 @@ namespace LobbyControl.Patches
             if (!__runOriginal)
                 return;
             Visibility[__instance] = LobbyType.FriendsOnly;
+            if (AsyncLoggerProxy.Enabled)
+                AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Lobby.Visibility", "friends");
+        }
+        
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(Lobby), nameof(Lobby.SetData))]
+        private static void trackData(Lobby __instance, bool __runOriginal, string key, string value)
+        {
+            if (!__runOriginal)
+                return;
+            
+            if (key == "name" && AsyncLoggerProxy.Enabled)
+                AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Lobby.Name", value);
         }
 
         public static LobbyType GetVisibility(Lobby lobby)

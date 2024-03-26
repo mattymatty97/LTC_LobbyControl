@@ -14,8 +14,12 @@ namespace LobbyControl.Patches
         private static bool PreventSave(GameNetworkManager __instance)
         {
             if (LobbyControl.CanSave && __instance.isHostingGame)
+            {
                 ES3.Save("LC_SavingMethod", LobbyControl.AutoSaveEnabled, __instance.currentSaveFileName);
-
+                if (AsyncLoggerProxy.Enabled)
+                    AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Lobby.Save", $"Saving {GameNetworkManager.Instance.currentSaveFileName}");
+            }
+            
             return LobbyControl.CanSave;
         }
 
@@ -31,6 +35,9 @@ namespace LobbyControl.Patches
 
             LobbyControl.AutoSaveEnabled = LobbyControl.CanSave = ES3.Load("LC_SavingMethod",
                 GameNetworkManager.Instance.currentSaveFileName, true);
+            
+            if (AsyncLoggerProxy.Enabled)
+                AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Lobby.Autosave", LobbyControl.CanSave.ToString());
         }
     }
 }

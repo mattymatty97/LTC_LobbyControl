@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Text;
 using System.Threading;
 using GameNetcodeStuff;
 using HarmonyLib;
@@ -26,6 +27,9 @@ namespace LobbyControl.Patches
             
             if (!LobbyControl.PluginConfig.JoinQueue.Enabled.Value)
                 return;
+            
+            if (AsyncLoggerProxy.Enabled)
+                AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Player.Queue", $"Player Enqueued {Encoding.ASCII.GetString(request.Payload)} remaining:{ConnectionQueue.Count}");
             
             response.Pending = true;
             ConnectionQueue.Enqueue(response);
@@ -76,7 +80,10 @@ namespace LobbyControl.Patches
             lock (_lock)
             {
                 if (_currentConnectingPlayer == clientId)
-                {
+                {                    
+                    if (AsyncLoggerProxy.Enabled)
+                        AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Player.Queue", $"Player Disconnected!");
+
                     _currentConnectingPlayer = null;
                     _currentConnectingExpiration = 0;
                 }
@@ -168,7 +175,10 @@ namespace LobbyControl.Patches
                         return;
 
                     if (_currentConnectingPlayer.Value != 0L)
-                    {
+                    {                    
+                        if (AsyncLoggerProxy.Enabled)
+                            AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Player.Queue", $"Player Timeout!");
+
                         LobbyControl.Log.LogWarning(
                             $"Connection to {_currentConnectingPlayer.Value} expired, Disconnecting!");
                         try
@@ -191,6 +201,8 @@ namespace LobbyControl.Patches
                     
                     if (ConnectionQueue.TryDequeue(out var response))
                     {
+                        if (AsyncLoggerProxy.Enabled)
+                            AsyncLoggerProxy.WriteEvent(LobbyControl.NAME, "Player.Queue", $"Player Dequeued remaining:{ConnectionQueue.Count}");
                         LobbyControl.Log.LogWarning($"Connection request Resumed! remaining: {ConnectionQueue.Count}");
                         response.Pending = false;
                         if (!response.Approved)

@@ -1,3 +1,6 @@
+## v2.3.5
+- soft integration with new AsyncLoggers API
+
 ## v2.3.4
 - maybe fix disconnected players from remaining in the lobby
 - fix minor bug with LobbyCompatibility SoftDependency

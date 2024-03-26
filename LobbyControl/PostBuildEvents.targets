@@ -34,6 +34,7 @@
         <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.PhysicsModule.dll" Publicize="false"/>
         <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.AudioModule.dll" Publicize="false"/>
         <Reference Include="..\Dependencies\ReservedItemSlotCore.dll" Publicize="false"/>
+        <Reference Include="..\Dependencies\AsyncLoggers.dll" Publicize="false"/>
 </ItemGroup>
 
 <!-- Ensure the user (you!) has actually set everything up properly. -->
