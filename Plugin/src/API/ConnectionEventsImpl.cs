@@ -41,6 +41,8 @@ public static partial class ConnectionEvents
 
     //--------------------INTERNAL STUFF------------------
 
+    internal static bool HostHasLobbyControl { get; set; }
+
     internal static void RaiseConnectionCheckpointServerEvent(ulong clientId, ConnectionCheckpoint checkpoint)
     {
         try
