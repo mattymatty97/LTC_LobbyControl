@@ -28,6 +28,17 @@ namespace LobbyControl.Patches;
 [HarmonyPatch]
 internal class JoinQueuePatches
 {
+    internal static uint MaxPlayerCount
+    {
+        get
+        {
+            var startOfRound = StartOfRound.Instance;
+            if(!startOfRound)
+                return 0;
+            return (uint)startOfRound.allPlayerObjects.Length;
+        }
+    }
+
     internal static void Init()
     {
         var methodInfo =
@@ -491,8 +502,10 @@ internal class JoinQueuePatches
                 ConnectingClient = null;
             }
 
+            var lobbyFull = (StartOfRound.Instance.connectedPlayersAmount + 1) >= MaxPlayerCount;
+
             //if we can let new connections in
-            if (LateJoinPatches._allowNewConnection)
+            if (LateJoinPatches._allowNewConnection && !lobbyFull)
             {
                 //wait until the delay between connections
                 if (ConnectingClient is not null)
@@ -532,7 +545,7 @@ internal class JoinQueuePatches
 
             while (ConnectionQueue.TryDequeue(out var entry))
             {
-                entry.RefuseConnection("Ship has landed!");
+                entry.RefuseConnection(lobbyFull ? "Lobby is full!" : "Ship has landed!");
             }
         }
         catch (Exception ex)

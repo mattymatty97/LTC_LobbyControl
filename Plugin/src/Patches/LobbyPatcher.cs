@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using HarmonyLib;
+using LobbyControl.Networking;
 using Steamworks;
 using Steamworks.Data;
 
@@ -8,16 +9,22 @@ namespace LobbyControl.Patches;
 [HarmonyPatch]
 internal class LobbyPatcher
 {
-    private static readonly Dictionary<Lobby, LobbyType> Visibility = [];
-    private static readonly Dictionary<Lobby, bool> Open = [];
+    internal static readonly Dictionary<Lobby, LobbyType> Visibility = [];
+    internal static readonly Dictionary<Lobby, bool> Open = [];
 
     [HarmonyPostfix]
     [HarmonyPatch(typeof(Lobby), nameof(Lobby.SetJoinable))]
-    private static void TrackOpenStatus(Lobby __instance, object[] __args, bool __runOriginal)
+    private static void TrackOpenStatus(Lobby __instance, bool b, bool __runOriginal)
     {
         if (!__runOriginal)
             return;
-        Open[__instance] = (bool)__args[0];
+
+        if (!__instance.IsOwnedBy(SteamClient.SteamId))
+            return;
+
+        Open[__instance] = b;
+
+        NamedMessages.LobbyStatusClientRpc(b, GetVisibility(__instance));
     }
 
     [HarmonyPostfix]
@@ -26,7 +33,13 @@ internal class LobbyPatcher
     {
         if (!__runOriginal)
             return;
+
+        if (!__instance.IsOwnedBy(SteamClient.SteamId))
+            return;
+
         Visibility[__instance] = LobbyType.Public;
+
+        NamedMessages.LobbyStatusClientRpc(IsOpen(__instance), LobbyType.Public);
     }
 
     [HarmonyPostfix]
@@ -35,7 +48,13 @@ internal class LobbyPatcher
     {
         if (!__runOriginal)
             return;
+
+        if (!__instance.IsOwnedBy(SteamClient.SteamId))
+            return;
+
         Visibility[__instance] = LobbyType.Private;
+
+        NamedMessages.LobbyStatusClientRpc(IsOpen(__instance), LobbyType.Private);
     }
 
     [HarmonyPostfix]
@@ -44,20 +63,18 @@ internal class LobbyPatcher
     {
         if (!__runOriginal)
             return;
-        Visibility[__instance] = LobbyType.FriendsOnly;
-    }
 
-    [HarmonyPostfix]
-    [HarmonyPatch(typeof(Lobby), nameof(Lobby.SetData))]
-    private static void trackData(Lobby __instance, bool __runOriginal, string key, string value)
-    {
-        if (!__runOriginal)
+        if (!__instance.IsOwnedBy(SteamClient.SteamId))
             return;
+
+        Visibility[__instance] = LobbyType.FriendsOnly;
+
+        NamedMessages.LobbyStatusClientRpc(IsOpen(__instance), LobbyType.FriendsOnly);
     }
 
     public static LobbyType GetVisibility(Lobby lobby)
     {
-        return Visibility.ContainsKey(lobby) ? Visibility[lobby] : LobbyType.Private;
+        return Visibility.GetValueOrDefault(lobby, LobbyType.Private);
     }
 
     public static bool IsOpen(Lobby lobby)

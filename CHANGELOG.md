@@ -1,3 +1,9 @@
+## v2.6.0
+- Add lobby status synchronization between host and clients.
+- Leave steam lobby when the host leaves (fixing #30 and closing #31).
+- Rework friend invite button to follow the host's lobby status.
+- Attempt to fix another "invisible player" bug source.
+
 ## v2.5.12
 - Add queue handling for Lobby command status.
 - Refactor connection queue to improve client management for late joins.

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -5,6 +6,8 @@ using System.Reflection.Emit;
 using HarmonyLib;
 using LobbyControl.Utils;
 using LobbyControl.Utils.IL;
+using Netcode.Transports.Facepunch;
+using Steamworks;
 using Unity.Netcode;
 using Object = UnityEngine.Object;
 
@@ -94,22 +97,6 @@ internal class LateJoinPatches
     }
 
     /// <summary>
-    ///     Make the friend invite button work again once we open the lobby.
-    /// </summary>
-    [HarmonyPostfix]
-    [HarmonyPatch(typeof(QuickMenuManager), nameof(QuickMenuManager.InviteFriendsButton))]
-    private static void FixFriendInviteButton(bool __runOriginal)
-    {
-        if (!__runOriginal)
-            return;
-        var manager = GameNetworkManager.Instance;
-        // Only do this if the game isn't doing it by itself already.
-        if (GameNetworkManager.Instance.gameHasStarted && manager.currentLobby.HasValue &&
-            LobbyPatcher.IsOpen(manager.currentLobby.Value))
-            GameNetworkManager.Instance.InviteFriendsUI();
-    }
-
-    /// <summary>
     ///     Prevent leaving the lobby on starting the first game.
     /// </summary>
     [HarmonyPrefix]
@@ -122,7 +109,25 @@ internal class LateJoinPatches
     }
 
     /// <summary>
-    ///     Temporarily close the lobby while a game is ongoing. This prevents people trying to join mid-game.
+    ///     Automatically leave the Steam lobby when the host leaves.
+    ///     This ensures that clients don't remain in a lobby when the game host has disconnected.
+    /// </summary>
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(GameNetworkManager), nameof(GameNetworkManager.SteamMatchmaking_OnLobbyMemberLeave))]
+    private static void LeaveLobbyIfHostLeaves(GameNetworkManager __instance, Friend friend)
+    {
+        if (NetworkManager.Singleton.NetworkConfig.NetworkTransport is not FacepunchTransport transport)
+            return;
+
+        if (friend.Id != transport.targetSteamId)
+            return;
+
+        LobbyControl.Log.LogDebug("Host left the lobby, leaving automatically too.");
+        __instance.LeaveCurrentSteamLobby();
+    }
+
+    /// <summary>
+    ///     Temporarily close the lobby while a game is ongoing. This prevents people from trying to join mid-game.
     /// </summary>
     [HarmonyPrefix]
     [HarmonyPriority(Priority.Last)]
@@ -132,15 +137,15 @@ internal class LateJoinPatches
         if (!__runOriginal)
             return;
 
-        if (__instance.IsServer && __instance.inShipPhase)
-        {
-            LobbyControl.Log.LogDebug("Setting lobby to not joinable.");
-            LobbyControl.CanModifyLobby = false;
-            GameNetworkManager.Instance.SetLobbyJoinable(false);
+        if (!__instance.IsServer)
+            return;
 
-            // Remove the friend invite button in the ESC menu.
-            Object.FindObjectOfType<QuickMenuManager>().inviteFriendsTextAlpha.alpha = 0f;
-        }
+        if (!__instance.inShipPhase)
+            return;
+
+        LobbyControl.Log.LogDebug("Setting lobby to not joinable.");
+        LobbyControl.CanModifyLobby = false;
+        GameNetworkManager.Instance.SetLobbyJoinable(false);
     }
 
     /// <summary>
@@ -153,11 +158,11 @@ internal class LateJoinPatches
         if (!__runOriginal)
             return;
 
-        LobbyControl.CanModifyLobby = true;
+        LobbyControl.CanModifyLobby = __instance.IsServer;
     }
 
     /// <summary>
-    ///     Allow to reopen the steam lobby after a game has ended.
+    ///     Allow reopening the steam lobby after a game has ended.
     /// </summary>
     [HarmonyPostfix]
     [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.SetShipReadyToLand))]
@@ -165,6 +170,9 @@ internal class LateJoinPatches
     private static void ReopenSteamLobby(StartOfRound __instance, bool __runOriginal)
     {
         if (!__runOriginal)
+            return;
+
+        if (!__instance.IsServer)
             return;
 
         LobbyControl.Log.LogDebug("Lobby can be re-opened");
@@ -191,15 +199,103 @@ internal class LateJoinPatches
         }
     }
 
+
+    /// <summary>
+    ///     Manages the visibility of the friend invite button based on the current lobby state.
+    ///     Shows the invite button when the lobby is open and joinable, hides it otherwise.
+    /// </summary>
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(QuickMenuManager), nameof(QuickMenuManager.OpenQuickMenu))]
+    private static void ManageFriendInviteButtonVisibility(QuickMenuManager __instance, bool __runOriginal)
+    {
+        if (!__runOriginal)
+            return;
+
+        var currentLobby = GameNetworkManager.Instance.currentLobby;
+
+        if (currentLobby.HasValue && LobbyPatcher.IsOpen(currentLobby.Value))
+        {
+            __instance.inviteFriendsTextAlpha.alpha = 1f;
+        }
+        else
+        {
+            __instance.DisableInviteFriendsButton();
+        }
+    }
+
+    /// <summary>
+    ///     Make the friend invite button work again once we open the lobby.
+    /// </summary>
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(QuickMenuManager), nameof(QuickMenuManager.InviteFriendsButton))]
+    private static void FixFriendInviteButton(bool __runOriginal)
+    {
+        if (!__runOriginal)
+            return;
+        var manager = GameNetworkManager.Instance;
+
+        // Only do this if the game isn't doing it by itself already.
+        if (GameNetworkManager.Instance.gameHasStarted && manager.currentLobby.HasValue &&
+            LobbyPatcher.IsOpen(manager.currentLobby.Value))
+            GameNetworkManager.Instance.InviteFriendsUI();
+    }
+
     [HarmonyPostfix]
     [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnPlayerConnectedClientRpc))]
     private static void ResetDcFlags(StartOfRound __instance, ulong clientId,
         int assignedPlayerObjectId)
     {
         var controllerB = __instance.allPlayerScripts[assignedPlayerObjectId];
+
         controllerB.disconnectedMidGame = false;
         //re-enable the player model (typically needed for back-filling players)
         controllerB.DisablePlayerModel(controllerB.gameObject, true, true);
+    }
+
+    [HarmonyTranspiler]
+    [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.OnPlayerConnectedClientRpc))]
+    private static IEnumerable<CodeInstruction> FixAlivePlayerLoop(IEnumerable<CodeInstruction> instructions, ILGenerator ilGenerator)
+    {
+        var codes = instructions.ToList();
+
+        var connectedPlayersAmountFieldInfo = typeof(StartOfRound).GetField(nameof(StartOfRound.connectedPlayersAmount), AccessTools.all);
+        var allPlayerScriptsFieldInfo = typeof(StartOfRound).GetField(nameof(StartOfRound.allPlayerScripts), AccessTools.all);
+        var arrayLengthPropertyInfo = typeof(Array).GetProperty(nameof(Array.Length), AccessTools.all);
+
+        // - for (int index = 0; index < this.connectedPlayersAmount + 1; ++index)
+        // + for (int index = 0; index < this.allPlayerScripts.Length; ++index)
+        // = {
+        // =     if (index == 0 || !this.allPlayerScripts[index].IsOwnedByServer)
+        // =         this.allPlayerScripts[index].isPlayerControlled = true;
+        // = }
+        var injector = new ILInjector(codes)
+            .Find([
+                ILMatcher.Ldloc().CaptureAs(out var indexInstruction),
+                ILMatcher.Ldarg(0),
+                ILMatcher.Ldfld(connectedPlayersAmountFieldInfo),
+                ILMatcher.Ldc(1),
+                ILMatcher.Opcode(OpCodes.Add),
+                ILMatcher.Branch().CaptureAs(out var exitInstruction)
+            ]);
+
+        if (!injector.IsValid)
+        {
+            // print error
+            LobbyControl.Log.LogWarning("OnPlayerConnectedClientRpc patch failed!!");
+            LobbyControl.Log.LogDebug(string.Join("\n", injector.ReleaseInstructions()));
+            return codes;
+        }
+
+        return injector
+            .RemoveLastMatch()
+            .Insert([
+                indexInstruction,
+                InstructionUtilities.MakeLdarg(0),
+                new CodeInstruction(OpCodes.Ldfld, allPlayerScriptsFieldInfo),
+                new CodeInstruction(OpCodes.Call, arrayLengthPropertyInfo!.GetMethod),
+                exitInstruction
+            ])
+            .ReleaseInstructions();
     }
 
     [HarmonyPrefix]

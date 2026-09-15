@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "name": "LobbyControl_Experimental",
-  "version_number": "2.5.12",
+  "version_number": "2.6.0",
   "website_url": "https://github.com/mattymatty97/LTC_LobbyControl",
   "description": "A collection of Patches for Lethal Company with Quality of life changes for the Host. ( LateJoin Included )",
   "dependencies": [

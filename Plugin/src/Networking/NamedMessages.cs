@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using LobbyControl.Patches;
+using Steamworks;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
@@ -10,6 +12,7 @@ internal static class NamedMessages
     private static readonly string BaseName = typeof(NamedMessages).FullName;
     private static readonly string ReorderRadarClientRpcMessage = $"{BaseName}|ReorderRadarClientRpc";
     private static readonly string ResetPlayerValuesClientRpcMessage = $"{BaseName}|ResetPlayerValuesClientRpc";
+    private static readonly string LobbyStatusClientRpcMessage = $"{BaseName}|LobbyStatusClientRpc";
 
     internal static void RegisterNamedMessages()
     {
@@ -17,6 +20,8 @@ internal static class NamedMessages
             OnReorderRadarClientRpc);
         NetworkManager.Singleton.CustomMessagingManager.RegisterNamedMessageHandler(ResetPlayerValuesClientRpcMessage,
             OnResetPlayerValuesClientRpc);
+        NetworkManager.Singleton.CustomMessagingManager.RegisterNamedMessageHandler(LobbyStatusClientRpcMessage,
+            OnLobbyStatusClientRpc);
     }
 
     internal static void UnregisterNamedMessages()
@@ -24,6 +29,8 @@ internal static class NamedMessages
         NetworkManager.Singleton.CustomMessagingManager.UnregisterNamedMessageHandler(ReorderRadarClientRpcMessage);
         NetworkManager.Singleton.CustomMessagingManager
             .UnregisterNamedMessageHandler(ResetPlayerValuesClientRpcMessage);
+        NetworkManager.Singleton.CustomMessagingManager
+            .UnregisterNamedMessageHandler(LobbyStatusClientRpcMessage);
     }
 
     internal static void ReorderRadarClientRpc(IReadOnlyList<ulong> targets = null)
@@ -188,5 +195,44 @@ internal static class NamedMessages
             playerScript.currentVoiceChatIngameSettings.voiceAudio.GetComponent<OccludeAudio>().overridingLowPass =
                 false;
         }
+    }
+
+    internal static void LobbyStatusClientRpc(bool joinability, LobbyType type, IReadOnlyList<ulong> targets = null)
+    {
+        if (!NetworkManager.Singleton.IsServer)
+            return;
+
+        var buffer = new FastBufferWriter(sizeof(bool) + sizeof(LobbyType), Allocator.Temp);
+        buffer.WriteValue(joinability);
+        buffer.WriteValue(type);
+
+        if (targets == null)
+            NetworkManager.Singleton.CustomMessagingManager.SendNamedMessageToAll(LobbyStatusClientRpcMessage, buffer);
+        else
+            NetworkManager.Singleton.CustomMessagingManager.SendNamedMessage(LobbyStatusClientRpcMessage, targets,
+                buffer);
+    }
+
+    private static void OnLobbyStatusClientRpc(ulong senderId, FastBufferReader data)
+    {
+        if (senderId != NetworkManager.ServerClientId)
+            return;
+
+        if (!GameNetworkManager.Instance || !GameNetworkManager.Instance.localPlayerController || !GameNetworkManager.Instance.currentLobby.HasValue)
+        {
+            LobbyControl.Log.LogError($"Received {nameof(LobbyStatusClientRpc)} while not connected to a lobby!");
+            return;
+        }
+
+        var currentLobby = GameNetworkManager.Instance.currentLobby.Value;
+
+        if (currentLobby.IsOwnedBy(SteamClient.SteamId))
+            return;
+
+        data.ReadValue(out bool joinability);
+        data.ReadValue(out LobbyType type);
+
+        LobbyPatcher.Open[currentLobby] = joinability;
+        LobbyPatcher.Visibility[currentLobby] = type;
     }
 }
