@@ -82,9 +82,9 @@ internal static class NamedMessages
         buffer.WriteValue(playerIndex);
 
         if (targets == null)
-            NetworkManager.Singleton.CustomMessagingManager.SendNamedMessageToAll(ReorderRadarClientRpcMessage, buffer);
+            NetworkManager.Singleton.CustomMessagingManager.SendNamedMessageToAll(ResetPlayerValuesClientRpcMessage, buffer);
         else
-            NetworkManager.Singleton.CustomMessagingManager.SendNamedMessage(ReorderRadarClientRpcMessage, targets,
+            NetworkManager.Singleton.CustomMessagingManager.SendNamedMessage(ResetPlayerValuesClientRpcMessage, targets,
                 buffer);
     }
 
