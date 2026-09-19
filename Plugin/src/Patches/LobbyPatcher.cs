@@ -1,8 +1,10 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using HarmonyLib;
 using LobbyControl.Networking;
 using Steamworks;
 using Steamworks.Data;
+using Unity.Netcode;
 
 namespace LobbyControl.Patches;
 
@@ -24,7 +26,9 @@ internal class LobbyPatcher
 
         Open[__instance] = b;
 
-        NamedMessages.LobbyStatusClientRpc(b, GetVisibility(__instance));
+        var targets = NetworkManager.Singleton.ConnectedClientsIds.ToList();
+        targets.Remove(NetworkManager.Singleton.LocalClientId);
+        NamedMessages.LobbyStatusClientRpc(b, GetVisibility(__instance), targets);
     }
 
     [HarmonyPostfix]
@@ -39,7 +43,9 @@ internal class LobbyPatcher
 
         Visibility[__instance] = LobbyType.Public;
 
-        NamedMessages.LobbyStatusClientRpc(IsOpen(__instance), LobbyType.Public);
+        var targets = NetworkManager.Singleton.ConnectedClientsIds.ToList();
+        targets.Remove(NetworkManager.Singleton.LocalClientId);
+        NamedMessages.LobbyStatusClientRpc(IsOpen(__instance), LobbyType.Public, targets);
     }
 
     [HarmonyPostfix]
@@ -54,7 +60,9 @@ internal class LobbyPatcher
 
         Visibility[__instance] = LobbyType.Private;
 
-        NamedMessages.LobbyStatusClientRpc(IsOpen(__instance), LobbyType.Private);
+        var targets = NetworkManager.Singleton.ConnectedClientsIds.ToList();
+        targets.Remove(NetworkManager.Singleton.LocalClientId);
+        NamedMessages.LobbyStatusClientRpc(IsOpen(__instance), LobbyType.Private, targets);
     }
 
     [HarmonyPostfix]
@@ -69,7 +77,9 @@ internal class LobbyPatcher
 
         Visibility[__instance] = LobbyType.FriendsOnly;
 
-        NamedMessages.LobbyStatusClientRpc(IsOpen(__instance), LobbyType.FriendsOnly);
+        var targets = NetworkManager.Singleton.ConnectedClientsIds.ToList();
+        targets.Remove(NetworkManager.Singleton.LocalClientId);
+        NamedMessages.LobbyStatusClientRpc(IsOpen(__instance), LobbyType.FriendsOnly, targets);
     }
 
     public static LobbyType GetVisibility(Lobby lobby)

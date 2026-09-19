@@ -220,7 +220,7 @@ internal static class NamedMessages
 
         if (!GameNetworkManager.Instance || !GameNetworkManager.Instance.localPlayerController || !GameNetworkManager.Instance.currentLobby.HasValue)
         {
-            LobbyControl.Log.LogError($"Received {nameof(LobbyStatusClientRpc)} while not connected to a lobby!");
+            LobbyControl.Log.LogDebug($"Received {nameof(LobbyStatusClientRpc)} while not connected to a lobby. Discarding!");
             return;
         }
 
