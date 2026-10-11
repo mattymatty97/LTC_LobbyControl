@@ -2,27 +2,27 @@
 
 namespace LobbyControl.TerminalCommands;
 
-public class Command
+internal class Command
 {
-    public TerminalNode previousTerminalNode;
+    internal TerminalNode previousTerminalNode;
 
-    public bool awaitingConfirmation
+    internal bool awaitingConfirmation
     {
         get { return CommandManager.awaitingConfirmationCommand == this; }
         set { CommandManager.awaitingConfirmationCommand = value ? this : null; }
     }
 
-    public virtual bool IsCommand(string[] args)
+    internal virtual bool IsCommand(string[] args)
     {
         return false;
     }
 
-    public virtual TerminalNode Execute(string[] args)
+    internal virtual TerminalNode Execute(string[] args)
     {
         return TerminalPatch.CreateTerminalNode("Execute override was not found.\n\n");
     }
 
-    public virtual TerminalNode ExecuteConfirmation(string[] args)
+    internal virtual TerminalNode ExecuteConfirmation(string[] args)
     {
         string arg = args[0].ToLower();
 

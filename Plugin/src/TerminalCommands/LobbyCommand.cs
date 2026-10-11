@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using BepInEx;
 using HarmonyLib;
+using LobbyControl.ConnectionQueue;
 using LobbyControl.Patches;
 using LobbyControl.Utils;
 using Unity.Netcode;
@@ -14,55 +15,59 @@ using Object = UnityEngine.Object;
 
 namespace LobbyControl.TerminalCommands;
 
-public class LobbyCommand : Command
+internal class LobbyCommand : Command
 {
     private const string DefaultText =
-        @"- status        : prints the current lobby status
+        """
+        - status        : prints the current lobby status
 
-Steam:
-- open          : open the lobby
-- close         : close the lobby
-- private       : set lobby to Invite Only
-- friend        : set lobby to Friends Only
-- public        : set lobby to Public
-- rename [name] : change the name of the lobby
+        Steam:
+        - open          : open the lobby
+        - close         : close the lobby
+        - private       : set lobby to Invite Only
+        - friend        : set lobby to Friends Only
+        - public        : set lobby to Public
+        - rename [name] : change the name of the lobby
 
-Saving:
-- autosave      : toggle autosave for the savefile
-- save (name)   : save the lobby
-- load (name)   : load a savefile
-- switch (name) : swap savefile without loading it
-- clear         : reset the current lobby to empty
+        Saving:
+        - autosave      : toggle autosave for the savefile
+        - save (name)   : save the lobby
+        - load (name)   : load a savefile
+        - switch (name) : swap savefile without loading it
+        - clear         : reset the current lobby to empty
 
-Extra:
-- dropall       : drop all items to the ground
-";
+        Extra:
+        - dropall       : drop all items to the ground
+
+        """;
 
     private const string DefaultTextLAN =
-        @"- status        : prints the current lobby status
+        """
+        - status        : prints the current lobby status
 
-LAN:
-- open          : set the lobby to be discoverable
-- close         : set the lobby to be non-discoverable
-- rename [name] : change the name of the lobby
+        LAN:
+        - open          : set the lobby to be discoverable
+        - close         : set the lobby to be non-discoverable
+        - rename [name] : change the name of the lobby
 
-Saving:
-- autosave      : toggle autosave for the savefile
-- save (name)   : save the lobby
-- load (name)   : load a savefile
-- switch (name) : swap savefile without loading it
-- clear         : reset the current lobby to empty
+        Saving:
+        - autosave      : toggle autosave for the savefile
+        - save (name)   : save the lobby
+        - load (name)   : load a savefile
+        - switch (name) : swap savefile without loading it
+        - clear         : reset the current lobby to empty
 
-Extra:
-- dropall       : drop all items to the ground
-";
+        Extra:
+        - dropall       : drop all items to the ground
 
-    public override bool IsCommand(string[] args)
+        """;
+
+    internal override bool IsCommand(string[] args)
     {
         return GameNetworkManager.Instance.isHostingGame && args[0].Trim().ToLower() == "lobby";
     }
 
-    public override TerminalNode Execute(string[] args)
+    internal override TerminalNode Execute(string[] args)
     {
         var node = ScriptableObject.CreateInstance<TerminalNode>();
         try
@@ -265,17 +270,17 @@ Extra:
         if (args.Length > 2 && args[2].ToLower().Equals("queue"))
         {
             builder = new StringBuilder("Lobby Queue Status:");
-            if (JoinQueuePatches.ConnectingClient != null)
+            if (ConnectionQueueState.ConnectingClient != null)
             {
-                builder.Append("\n┬ Connecting client is '").Append(JoinQueuePatches.ConnectingClient.Name).Append("'");
-                builder.Append("\n└ Remaining time: ").Append(JoinQueuePatches.ConnectionTimer.Remaining.TotalMilliseconds).Append(" ms");
+                builder.Append("\n┬ Connecting client is '").Append(ConnectionQueueState.ConnectingClient.Name).Append("'");
+                builder.Append("\n└ Remaining time: ").Append(ConnectionQueueState.ConnectionTimer.Remaining.TotalMilliseconds).Append(" ms");
             }
             else
                 builder.Append("\n─ No client is currently connecting");
 
-            builder.Append("\n┬ Queued clients: ").Append(JoinQueuePatches.ConnectionQueue.Count);
+            builder.Append("\n┬ Queued clients: ").Append(ConnectionQueueState.ConnectionQueue.Count);
 
-            foreach (var client in JoinQueuePatches.ConnectionQueue.Take(7))
+            foreach (var client in ConnectionQueueState.ConnectionQueue.Take(7))
             {
                 builder.Append("\n├ ").Append(client.Name);
             }
@@ -320,7 +325,7 @@ Extra:
             if (PluginConfig.JoinQueue.Enabled.Value)
             {
                 builder.Append("\n");
-                builder.Append("\n- ").Append(JoinQueuePatches.QueuedClients).Append(" Players are waiting in queue");
+                builder.Append("\n- ").Append(ConnectionQueueState.QueuedClients).Append(" Players are waiting in queue");
                 builder.Append("\n Type 'lobby status queue' for more details");
             }
 
@@ -345,7 +350,7 @@ Extra:
             }
 
             manager.lobbyHostSettings.isLobbyPublic = true;
-            ES3.Save<bool>("HostSettings_Public", manager.lobbyHostSettings.isLobbyPublic, "LCGeneralSaveData");
+            ES3.Save("HostSettings_Public", manager.lobbyHostSettings.isLobbyPublic, "LCGeneralSaveData");
         }
         else if (!manager.currentLobby.HasValue)
         {
@@ -381,7 +386,7 @@ Extra:
             }
 
             manager.lobbyHostSettings.isLobbyPublic = false;
-            ES3.Save<bool>("HostSettings_Public", manager.lobbyHostSettings.isLobbyPublic, "LCGeneralSaveData");
+            ES3.Save("HostSettings_Public", manager.lobbyHostSettings.isLobbyPublic, "LCGeneralSaveData");
         }
         else if (!manager.currentLobby.HasValue)
         {
@@ -413,7 +418,7 @@ Extra:
             return false;
         }
 
-        ES3.Save<bool>("HostSettings_Public", false, "LCGeneralSaveData");
+        ES3.Save("HostSettings_Public", false, "LCGeneralSaveData");
         manager.currentLobby.Value.SetPrivate();
 
         var outText = "Lobby is now Private";
@@ -433,7 +438,7 @@ Extra:
             return false;
         }
 
-        ES3.Save<bool>("HostSettings_Public", false, "LCGeneralSaveData");
+        ES3.Save("HostSettings_Public", false, "LCGeneralSaveData");
         manager.currentLobby.Value.SetFriendsOnly();
 
         var outText = "Lobby is now Friends Only";
@@ -453,7 +458,7 @@ Extra:
             return false;
         }
 
-        ES3.Save<bool>("HostSettings_Public", true, "LCGeneralSaveData");
+        ES3.Save("HostSettings_Public", true, "LCGeneralSaveData");
         manager.currentLobby.Value.SetPublic();
 
         var outText = "Lobby is now Public";
@@ -487,7 +492,7 @@ Extra:
         manager.steamLobbyName = manager.lobbyHostSettings.lobbyName;
         if (manager.currentLobby.HasValue)
             manager.currentLobby.Value.SetData("name", manager.steamLobbyName);
-        ES3.Save<string>("HostSettings_Name", manager.steamLobbyName, "LCGeneralSaveData");
+        ES3.Save("HostSettings_Name", manager.steamLobbyName, "LCGeneralSaveData");
 
         var outText = "Lobby renamed to \"" + remaining + "\"";
         LobbyControl.Log.LogInfo(outText);
@@ -763,77 +768,77 @@ Extra:
                 if (unlockable.unlockableType == 0)
                     continue;
 
-                if (unlockable.alreadyUnlocked)
+                if (!unlockable.alreadyUnlocked)
+                    continue;
+
+                LobbyControl.Log.LogDebug($"{unlockable.unlockableName} starting");
+                if (!startOfRound.SpawnedShipUnlockables.ContainsKey(baseUnlockable))
+                    startOfRound.SpawnUnlockable(baseUnlockable);
+                var shipObject = startOfRound.SpawnedShipUnlockables[baseUnlockable]
+                    .GetComponent<PlaceableShipObject>();
+
+                shipObject ??= startOfRound.SpawnedShipUnlockables[baseUnlockable]
+                    .GetComponentInChildren<PlaceableShipObject>();
+
+                if (shipObject is null)
+                    continue;
+
+                LobbyControl.Log.LogDebug($"{unlockable.unlockableName} continuing");
+                if (shipObject.parentObjectSecondary)
                 {
-                    LobbyControl.Log.LogDebug($"{unlockable.unlockableName} starting");
-                    if (!startOfRound.SpawnedShipUnlockables.ContainsKey(baseUnlockable))
-                        startOfRound.SpawnUnlockable(baseUnlockable);
-                    PlaceableShipObject shipObject = startOfRound.SpawnedShipUnlockables[baseUnlockable]
-                        .GetComponent<PlaceableShipObject>();
+                    // Invert Rotation
+                    // Original: finalRotation = (Euler(placementRotation) * Inverse(mainMeshRotation)) * initialRotation
 
-                    if (shipObject is null)
-                        shipObject = startOfRound.SpawnedShipUnlockables[baseUnlockable]
-                            .GetComponentInChildren<PlaceableShipObject>();
-                    if (shipObject is null)
-                        continue;
+                    var finalRotation = shipObject.parentObjectSecondary.transform.rotation;
+                    var initialRotation = shipObject.parentObjectSecondary.transform.rotation;
+                    var mainMeshRotation = shipObject.mainMesh.transform.rotation;
 
-                    LobbyControl.Log.LogDebug($"{unlockable.unlockableName} continuing");
-                    if (shipObject.parentObjectSecondary)
-                    {
-                        // Invert Rotation
-                        // Original: finalRotation = (Euler(placementRotation) * Inverse(mainMeshRotation)) * initialRotation
+                    // First get the quaternion by multiplying by inverse of initialRotation
+                    var quaternion = finalRotation * Quaternion.Inverse(initialRotation);
 
-                        var finalRotation = shipObject.parentObjectSecondary.transform.rotation;
-                        var initialRotation = shipObject.parentObjectSecondary.transform.rotation;
-                        var mainMeshRotation = shipObject.mainMesh.transform.rotation;
+                    // Then solve for placementRotation
+                    unlockable.placedRotation = (quaternion * mainMeshRotation).eulerAngles;
 
-                        // First get the quaternion by multiplying by inverse of initialRotation
-                        var quaternion = finalRotation * Quaternion.Inverse(initialRotation);
+                    // Invert Position
+                    // Original: finalPosition = placementPosition + (parentPos - mainMeshPos) + (mainMeshPos - colliderPos)
 
-                        // Then solve for placementRotation
-                        unlockable.placedRotation = (quaternion * mainMeshRotation).eulerAngles;
+                    var finalPosition = shipObject.parentObjectSecondary.position;
+                    var offset1 = (shipObject.parentObjectSecondary.transform.position -
+                                   shipObject.mainMesh.transform.position);
+                    var offset2 = (shipObject.mainMesh.transform.position -
+                                   shipObject.placeObjectCollider.transform.position);
 
-                        // Invert Position
-                        // Original: finalPosition = placementPosition + (parentPos - mainMeshPos) + (mainMeshPos - colliderPos)
+                    unlockable.placedPosition = finalPosition - offset1 - offset2;
+                }
+                else
+                {
+                    // Calculate rotation
+                    // Original: finalRotation = (Euler(placementRotation) * Inverse(mainMeshRotation)) * initialRotation
+                    // We also have rotationOffset = finalRotation.eulerAngles
 
-                        var finalPosition = shipObject.parentObjectSecondary.position;
-                        var offset1 = (shipObject.parentObjectSecondary.transform.position -
-                                       shipObject.mainMesh.transform.position);
-                        var offset2 = (shipObject.mainMesh.transform.position -
-                                       shipObject.placeObjectCollider.transform.position);
+                    var finalRotation = Quaternion.Euler(shipObject.parentObject.rotationOffset);
+                    var initialRotation = shipObject.parentObject.transform.rotation;
+                    var mainMeshRotation = shipObject.mainMesh.transform.rotation;
 
-                        unlockable.placedPosition = finalPosition - offset1 - offset2;
-                    }
-                    else
-                    {
-                        // Calculate rotation
-                        // Original: finalRotation = (Euler(placementRotation) * Inverse(mainMeshRotation)) * initialRotation
-                        // We also have rotationOffset = finalRotation.eulerAngles
+                    // First get the quaternion
+                    var quaternion = finalRotation * Quaternion.Inverse(initialRotation);
 
-                        var finalRotation = Quaternion.Euler(shipObject.parentObject.rotationOffset);
-                        var initialRotation = shipObject.parentObject.transform.rotation;
-                        var mainMeshRotation = shipObject.mainMesh.transform.rotation;
+                    // Then solve for placementRotation
+                    unlockable.placedRotation = (quaternion * mainMeshRotation).eulerAngles;
 
-                        // First get the quaternion
-                        var quaternion = finalRotation * Quaternion.Inverse(initialRotation);
+                    // Calculate position
+                    // Original: positionOffset = elevatorTransform.InverseTransformPoint(placementPosition + offset1 + offset2)
+                    // Therefore: placementPosition = elevatorTransform.TransformPoint(positionOffset) - offset1 - offset2
 
-                        // Then solve for placementRotation
-                        unlockable.placedRotation = (quaternion * mainMeshRotation).eulerAngles;
+                    var offset1 = (shipObject.parentObject.transform.position -
+                                   shipObject.mainMesh.transform.position);
+                    var offset2 = (shipObject.mainMesh.transform.position -
+                                   shipObject.placeObjectCollider.transform.position);
 
-                        // Calculate position
-                        // Original: positionOffset = elevatorTransform.InverseTransformPoint(placementPosition + offset1 + offset2)
-                        // Therefore: placementPosition = elevatorTransform.TransformPoint(positionOffset) - offset1 - offset2
-
-                        var offset1 = (shipObject.parentObject.transform.position -
-                                       shipObject.mainMesh.transform.position);
-                        var offset2 = (shipObject.mainMesh.transform.position -
-                                       shipObject.placeObjectCollider.transform.position);
-
-                        // Transform the offset back to world space and solve for placementPosition
-                        unlockable.placedPosition =
-                            StartOfRound.Instance.elevatorTransform.TransformPoint(shipObject.parentObject
-                                .positionOffset) - offset1 - offset2;
-                    }
+                    // Transform the offset back to world space and solve for placementPosition
+                    unlockable.placedPosition =
+                        StartOfRound.Instance.elevatorTransform.TransformPoint(shipObject.parentObject
+                            .positionOffset) - offset1 - offset2;
                 }
             }
 
@@ -917,8 +922,8 @@ Extra:
                 startOfRound.__beginSendClientRpc(rpcID, clientRpcParams, RpcDelivery.Reliable);
             BytePacker.WriteValueBitPacked(bufferWriter, controller.actualClientId);
             BytePacker.WriteValueBitPacked(bufferWriter, startOfRound.connectedPlayersAmount - 1);
-            bufferWriter.WriteValueSafe<bool>(true);
-            bufferWriter.WriteValueSafe<ulong>(ulongList.ToArray());
+            bufferWriter.WriteValueSafe(true);
+            bufferWriter.WriteValueSafe(ulongList.ToArray());
             BytePacker.WriteValueBitPacked(bufferWriter, startOfRound.ClientPlayerList[controller.actualClientId]);
             BytePacker.WriteValueBitPacked(bufferWriter, groupCredits);
             BytePacker.WriteValueBitPacked(bufferWriter, startOfRound.currentLevelID);
@@ -926,7 +931,7 @@ Extra:
             BytePacker.WriteValueBitPacked(bufferWriter, timeUntilDeadline);
             BytePacker.WriteValueBitPacked(bufferWriter, quotaFulfilled);
             BytePacker.WriteValueBitPacked(bufferWriter, startOfRound.randomMapSeed);
-            bufferWriter.WriteValueSafe<bool>(in startOfRound.isChallengeFile);
+            bufferWriter.WriteValueSafe(in startOfRound.isChallengeFile);
             startOfRound.__endSendClientRpc(ref bufferWriter, rpcID, clientRpcParams, RpcDelivery.Reliable);
         }
     }

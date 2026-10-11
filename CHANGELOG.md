@@ -1,3 +1,9 @@
+## v2.7.0
+- Refactor connection queue system to modularize connection handling and support both Steam and LAN/direct connections.
+- Add `ILobbyConnection` API and expand `ConnectionEvents` and `ConnectionCheckpoint` with endpoint tracking and XML documentation.
+- Improve connection dropping handling.
+- Internal codebase cleanup and dependency proxy standardization.
+
 ## v2.6.0
 - Add lobby status synchronization between host and clients.
 - Leave steam lobby when the host leaves (fixing #30 and closing #31).

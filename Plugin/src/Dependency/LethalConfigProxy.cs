@@ -9,7 +9,7 @@ using LethalConfig.ConfigItems.Options;
 
 namespace LobbyControl.Dependency;
 
-public static class LethalConfigProxy
+internal static class LethalConfigProxy
 {
     private static bool? _enabled;
 

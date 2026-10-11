@@ -6,7 +6,7 @@ using LobbyCompatibility.Features;
 
 namespace LobbyControl.Dependency;
 
-public static class LobbyCompatibilityChecker
+internal static class LobbyCompatibilityProxy
 {
     public static bool Enabled
     {

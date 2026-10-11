@@ -8,7 +8,7 @@ using Unity.Netcode;
 
 namespace LobbyControl.Utils;
 
-public static class RPCUtils
+internal static class RPCUtils
 {
     private static readonly MethodInfo BeginSendClientRpc =
         AccessTools.Method(typeof(NetworkBehaviour), nameof(NetworkBehaviour.__beginSendClientRpc));

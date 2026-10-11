@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <!-- Common Versioning and Module Information -->
-        <Version>2.6.0</Version>
+        <Version>2.7.0</Version>
         <ModName>LobbyControl</ModName>
         <ModGUID>mattymatty.LobbyControl</ModGUID>
         <ModNameSpace>$(ModName)</ModNameSpace>
@@ -26,6 +26,7 @@
     <!-- Embedded Debug -->
     <PropertyGroup>
         <DebugSymbols>true</DebugSymbols>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <DebugType>embedded</DebugType>
         <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=./</PathMap>
     </PropertyGroup>

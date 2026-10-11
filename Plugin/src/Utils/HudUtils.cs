@@ -3,10 +3,10 @@ using UnityEngine;
 
 namespace LobbyControl.Utils;
 
-public static class HudUtils
+internal static class HudUtils
 {
     private static readonly WaitUntil WaitForAnimation = new (() => HUDManager.Instance.tipsPanelAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime >= 1);
-    
+
     internal static IEnumerator ShowMessageAfterDelay(string title, string text, float delay = 0f,
         bool isWarning = false)
     {

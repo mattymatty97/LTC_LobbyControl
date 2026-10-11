@@ -7,7 +7,7 @@ using Unity.Netcode;
 namespace LobbyControl.Patches;
 
 [HarmonyPatch]
-public static class FacepunchTransportPatches
+internal static class FacepunchTransportPatches
 {
     internal static readonly Dictionary<ulong, (Connection connection, ConnectionInfo connectionInfo)> Connections = [];
 

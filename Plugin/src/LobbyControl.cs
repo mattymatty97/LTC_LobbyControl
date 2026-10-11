@@ -80,8 +80,8 @@ internal class LobbyControl : BaseUnityPlugin
             }
             else
             {
-                if (LobbyCompatibilityChecker.Enabled)
-                    LobbyCompatibilityChecker.Init(GUID, Version.Parse(VERSION), 1, 2);
+                if (LobbyCompatibilityProxy.Enabled)
+                    LobbyCompatibilityProxy.Init(GUID, Version.Parse(VERSION), 1, 2);
                 Log.LogInfo("Initializing Configs");
 
                 PluginConfig.Init(this);

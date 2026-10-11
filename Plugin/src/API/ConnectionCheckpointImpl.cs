@@ -87,12 +87,14 @@ public partial class ConnectionCheckpoint : IDisposable
         Mask = 0;
     }
 
+    ///<inheritdoc />
     ~ConnectionCheckpoint()
     {
         if (!IsDisposed)
             Dispose();
     }
 
+    /// <inheritdoc />
     public override string ToString()
     {
         return $"{{{Name} from {Plugin.Name}}}";

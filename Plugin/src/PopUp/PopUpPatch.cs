@@ -7,9 +7,9 @@ using Object = UnityEngine.Object;
 namespace LobbyControl.PopUp;
 
 [HarmonyPatch]
-public class PopUpPatch
+internal class PopUpPatch
 {
-    public static readonly List<(string objectName, string text)> PopUps = [];
+    internal static readonly List<(string objectName, string text)> PopUps = [];
 
     [HarmonyPrefix]
     [HarmonyPatch(typeof(MenuManager), nameof(MenuManager.Awake))]

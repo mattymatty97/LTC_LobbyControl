@@ -3,7 +3,7 @@ using BepInEx.Bootstrap;
 
 namespace LobbyControl.Dependency;
 
-public static class LethalLevelLoaderDependency
+internal static class LethalLevelLoaderProxy
 {
     private static bool? _enabled;
     private static PluginInfo _pluginInfo;

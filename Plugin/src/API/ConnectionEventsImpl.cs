@@ -1,10 +1,11 @@
 using System;
 using System.Collections.Generic;
-using LobbyControl.Patches;
+using LobbyControl.ConnectionQueue;
 using Steamworks;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine.Pool;
+using NetworkEndPoint = Unity.Networking.Transport.NetworkEndPoint;
 
 namespace LobbyControl.API;
 
@@ -12,9 +13,10 @@ public static partial class ConnectionEvents
 {
     //---------------------EVENTS------------------------
 
-    public static partial ulong? ConnectingClientId => JoinQueuePatches.ConnectingClient?.ClientId;
-    public static partial SteamId? ConnectingSteamId => JoinQueuePatches.ConnectingClient?.SteamId;
-    public static partial string ConnectingName => JoinQueuePatches.ConnectingClient?.Name;
+    public static partial ulong? ConnectingClientId => ConnectionQueueState.ConnectingClient?.ClientId;
+    public static partial SteamId? ConnectingSteamId => ConnectionQueueState.ConnectingClient?.SteamId;
+    public static partial NetworkEndPoint? ConnectingEndpoint => ConnectionQueueState.ConnectingClient?.EndPoint;
+    public static partial string ConnectingName => ConnectionQueueState.ConnectingClient?.Name;
 
     public static partial ConnectionCheckpoint[] MissingCheckpoints
     {
