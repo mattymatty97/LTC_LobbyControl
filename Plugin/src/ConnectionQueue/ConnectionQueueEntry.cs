@@ -10,7 +10,7 @@ namespace LobbyControl.ConnectionQueue;
 
 internal class ConnectionQueueEntry
 {
-    private ILobbyConnection Connection { get; }
+    internal ILobbyConnection Connection { get; }
 
     public SteamId? SteamId => Connection.SteamId;
 
@@ -20,14 +20,7 @@ internal class ConnectionQueueEntry
 
     public string Name => Connection.Name + $"({ClientId})";
 
-    public ushort QueuePosition {
-        get {
-            if (ConnectionQueueState._connectingClient == this)
-                return 1;
-            var idx = Array.IndexOf<ConnectionQueueEntry>(ConnectionQueueState.ConnectionQueue.ToArray(), this);
-            return (ushort)(idx < 0 ? 0 : idx + 1);
-        }
-    }
+    public ushort? QueuePosition => ConnectionQueueState.QueuePosition(Connection);
 
     public (NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)? UnityConnection { get; private set; }
 
@@ -122,5 +115,10 @@ internal class ConnectionQueueEntry
         {
             LobbyControl.Log.LogError(ex);
         }
+    }
+
+    ~ConnectionQueueEntry()
+    {
+        Connection.Dispose();
     }
 }

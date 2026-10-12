@@ -132,8 +132,6 @@ internal class JoinQueuePatches
         NetworkManager.ConnectionApprovalResponse response,
         Exception __exception)
     {
-        ConnectionQueueEntry entry;
-
         if (__exception != null)
             return __exception;
 
@@ -180,6 +178,7 @@ internal class JoinQueuePatches
 
             response.Pending = true;
 
+            ConnectionQueueEntry entry;
             switch (nm.NetworkConfig.NetworkTransport)
             {
                 case FacepunchTransport:

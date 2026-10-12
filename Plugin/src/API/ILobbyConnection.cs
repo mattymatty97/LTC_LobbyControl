@@ -1,5 +1,6 @@
 using System;
 using JetBrains.Annotations;
+using LobbyControl.ConnectionQueue;
 using Steamworks;
 using Unity.Networking.Transport;
 
@@ -40,4 +41,17 @@ public interface ILobbyConnection : IDisposable
     /// Forcibly drops and disconnects the connection.
     /// </summary>
     public void DropConnection();
+
+    /// <summary>
+    /// Gets the current position of this connection in the join queue, or <c>null</c> if the connection is not currently queued.
+    /// </summary>
+    public ushort? QueuePosition => ConnectionQueueState.QueuePosition(this);
+
+    /// <summary>
+    /// Enqueues this connection into the lobby join queue if it is not already queued or actively connecting.
+    /// </summary>
+    /// <returns>
+    /// <c>true</c> if the connection was successfully enqueued; otherwise, <c>false</c>.
+    /// </returns>
+    public bool Enqueue() => ConnectionQueueState.EnqueueConnection(this);
 }
